@@ -1,0 +1,14 @@
+from django.conf.urls import patterns, include, url
+from jumpserver.api import view_splitter
+from jrelease.views import *
+
+urlpatterns = patterns('jrelease.views',
+                         url(r'^index/$', 'index', name='index'),
+                         url(r'^project/list/$', 'project_list', name='project_list'),
+                         url(r'^project/edit/$', 'project_edit', name='project_edit'),
+                         url(r'^project/detail/$', 'project_detail', name='project_detail'),
+                         url(r'^project/add/$', 'project_add', name='project_add'),
+                         url(r'^get/host/cluster/list/$', 'get_host_cluster_list', name='release_get_host_cluster_list'),
+                         url(r'^code/upload/$', 'code_upload', name='release_code_upload'),
+                         url(r'^get/proj/list/$', 'get_proj_list', name='release_get_proj_list'),
+                       )

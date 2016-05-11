@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+ <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-10">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>填写基本信息</h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="ibox-content">
+                        <form method="post" id="ruleForm" class="form-horizontal" action="">
+                            {% if error %}
+                                <div class="alert alert-warning text-center">{{ error }}</div>
+                            {% endif %}
+                            {% if msg %}
+                                <div class="alert alert-success text-center">{{ msg }}</div>
+                            {% endif %}
+                            <div class="form-group">
+                                <label for="assetname" class="col-sm-2 control-label">客户</label>
+                                <div class="col-xs-8">
+                                    <select name="usergroup_id_tmp" id="usergroup_id_tmp" class="form-control m-b input-sm get-auto" style="padding:0px 12px;">
+                                        <option value="">客户</option>
+                                        {% for usergroup in usergroup_all %}
+                                            {% ifequal usergroup.name usergroup_name %}
+                                                <option value="{{ usergroup.id }}" selected >{{ usergroup.name }}</option>
+                                            {% else %}
+                                                <option value="{{ usergroup.id }}" >{{ usergroup.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                             <div class="form-group">
+                                <label for="assetname" class="col-sm-2 control-label">项目</label>
+                                <div class="col-xs-8">
+                                    <select id="proj_id_tmp" name="proj_id_tmp" class="form-control m-b input-sm get-auto" style="padding:0px 12px;">
+                                        <option value="">项目</option>
+                                        {% for pro in project_all %}
+                                            {% ifequal pro.proj_name proj_name %}
+                                                <option value="{{ pro.id }}" selected>{{ pro.proj_name }}</option>
+                                            {% else %}
+                                                <option value="{{ pro.id }}">{{ pro.proj_name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="" class="col-sm-2 control-label">版本</label>
+                                 <div class="col-xs-8">
+                                     <select id="" name="" class="form-control m-b input-sm get-auto" style="padding:0px 12px;">
+
+                                     </select>
+                                 </div>
+                             </div>
+                             <div class="form-group">
+                                <label for="" class="col-sm-2 control-label">主机</label>
+                                 <div class="col-xs-8">
+                                    <div class="border">
+                                        {% for asset in asset_all %}
+                                            <div class="col-xs-6">
+                                                <input name="asset" class="testasset" id="asset.id" type="checkbox" value="asset.id">
+                                                <label for="asset.id">{{ asset.host_name_show }}</label>
+                                            </div>
+                                        {% endfor %}
+                                </div>
+                                 </div>
+                            </div>
+                            <div class="hr-line-dashed"></div>
+                            <div class="form-group">
+                                <div class="col-sm-4 col-sm-offset-2">
+                                    <button class="btn btn-white" type="reset">取消</button>
+                                    <button id="submit_button" class="btn btn-primary" type="submit">确认保存</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block self_footer_js %}
+<script>
+(function($){
+
+
+    $.getUrlParam = function(name)
+        {
+        var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r!=null) return unescape(r[2]); return null;
+        }
+    })(jQuery);
+$(document).ready(function(){
+
+
+    $("#usergroup_id_tmp").change(function(){
+        var usergroup_id = $("#usergroup_id_tmp").val()
+        $('#usergroup_id').val(usergroup_id)
+        url = '{% url 'release_get_proj_list' %}'
+        data = {usergroup_id: usergroup_id}
+        $.ajax({
+            type:'post',
+            url:url,
+            data:data,
+            success:function(data){
+                var arr = new Array();
+                data = JSON.parse(data);
+                arr = data;
+                $("#proj_id_tmp").empty();
+                $("#proj_id_tmp").append('<option value="">请选择</option>')
+                for(var i=0;i<arr.length;i++) {
+                    $("#proj_id_tmp").append('<option value="' + arr[i].pk + '">' + arr[i].fields.proj_name + '</option>');
+                }
+            },
+            error:function(){
+                alert(2)
+            }
+        });
+    });
+    var usergroup_name=$.getUrlParam('usergroup_name')
+    if(usergroup_name !==null && usergroup_name !=="") {
+            $("#usergroup_name").find("option").each(function () {
+
+                $("option[value='" + usergroup_name + "']").attr("selected", true);
+
+            })
+        }
+})
+function change_info(){
+        var args = $("#asset_form").serialize();
+        window.location = "{% url 'project_list' %}?" + args
+    }
+
+</script>
+{% endblock %}

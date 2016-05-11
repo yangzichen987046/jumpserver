@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block self_head_css_js %}
+    <link href="/static/css/plugins/datepicker/datepicker3.css" rel="stylesheet">
+    <link href="/static/css/plugins/chosen/chosen.css" rel="stylesheet">
+    <script src="/static/js/plugins/chosen/chosen.jquery.js"></script>
+{% endblock %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+ <style>
+     table {
+     display: table;
+     border-collapse: separate;
+     border-spacing: 2px;
+     border-color: grey;
+ }
+
+ tbody {
+     display: table-row-group;
+     vertical-align: middle;
+     border-color: inherit;
+ }
+
+ .table.border {
+     border: 1px solid #999;
+ }
+.table.hovered tbody tr:hover {
+    background-color: rgba(28,183,236,.1)
+}
+ tr {
+     display: table-row;
+     vertical-align: inherit;
+     border-color: inherit;
+ }
+
+ td, th {
+     display: table-cell;
+     vertical-align: inherit;
+ }
+
+ #hosts_list {
+     background-color: white;
+     background-image: none;
+     border-radius: 1px;
+     color: inherit;
+     display: block;
+     right: 23px;
+     left: 23px;
+ }
+ </style>
+<div class="wrapper wrapper-content animated fadeIn">
+    <div class="row">
+        <div class="col-sm-10">
+        <div class="ibox float-e-margins">
+            <div class="ibox-title">
+                <h5>上传文件</h5>
+                <div class="ibox-tools">
+                    <a class="collapse-link">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                    <a class="close-link">
+                        <i class="fa fa-times"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="ibox-content">
+                <div>
+                    <form id="my-awesome-dropzone" class="dropzone" action="">
+                        <div class="alert alert-warning text-center" id="error" style="display: none"></div>
+                        <div class="alert alert-success text-center" id="msg" style="display: none"></div>
+                        <div class="dropzone-previews">
+                            <div class="form-group col-xs-12">
+                                <label for="role" class="col-sm-2 control-label">请选择客户</label>
+                                <div class="col-sm-8"　id="role_name">
+                                     <select name="usergroup_name" id="usergroup_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;" onchange="change_info()">
+                                        <option value="">客户</option>
+                                             {% for usergroup in usergroup_all %}
+                                                     {% ifequal usergroup.name usergroup_name %}
+                                                          <option value="{{ usergroup.id}}" selected >{{ usergroup.name}}</option>
+                                                     {% else %}
+                                                          <option value="{{ usergroup.id}}" >{{ usergroup.name}}</option>
+                                                     {% endifequal %}
+                                             {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="role" class="col-sm-2 control-label">请选择项目</label>
+                                <div class="col-sm-8"　id="role_name">
+                                    <select id="proj_name" name="proj_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;" onchange="change_info()">
+                                    <option value="">项目</option>
+                                        {% for pro in project_all %}
+                                            {% ifequal pro.proj_name proj_name %}
+                                                     <option value="{{ pro.proj_name}}" selected>{{ pro.proj_name}}</option>
+                                                 {% else %}
+                                                     <option value="{{ pro.proj_name}}">{{ pro.proj_name}}</option>
+                                                 {% endifequal %}
+                                        {% endfor %}
+                                </select>
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="role" class="col-sm-2 control-label" style="margin-right: 15px;">请选择源码包</label>
+                                <div class="check text-center no-padding"　id="role_name" >
+
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="text-center col-xs-12" style="overflow: hidden;"><button type="submit" class="btn btn-primary">全部上传</button></div>
+                    </form>
+                </div>
+                <div>
+                    <div class="m text-right"><small>上传文件到后端服务器的/tmp下，请注意查看</small> </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block self_footer_js %}
+<script>
+    $(document).ready(function(){
+        $("#usergroup_name").change(function(){
+        var usergroup_id = $("#usergroup_name").val()
+        url = '{% url 'release_get_project_list' %}'
+        data = {usergroup_id:usergroup_id}
+        $.ajax({
+            type:'post',
+            url:url,
+            data:data,
+            success:function(data){
+                var arr = new Array();
+                data = JSON.parse(data);
+                arr = data;
+                $("#proj_name").empty();
+                $("#proj_name").append('<option value="">请选择</option>')
+                for(var i=0;i<arr.length;i++) {
+                    $("#proj_name").append(' <option >' + arr[i].fields.proj_name + '</option>');
+                }
+            },
+            error:function(){
+                alert(2)
+            }
+        });
+    });
+        Dropzone.options.myAwesomeDropzone = {
+            autoProcessQueue: false,
+            uploadMultiple: true,
+            parallelUploads: 100,
+            maxFilesize: 2048,
+            maxFiles: 100,
+            url: '/jrelease/code/upload/',
+
+            // Dropzone settings
+            init: function() {
+                var myDropzone = this;
+                this.element.querySelector("button[type=submit]").addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    myDropzone.processQueue();
+                });
+
+
+                this.on("sendingmultiple", function() {
+                });
+                this.on("successmultiple", function(files, response) {
+                    $('#msg').css('display', 'block');
+                    $('#msg').html(response)
+                });
+                this.on("errormultiple", function(files, response) {
+                    $('#error').css('display', 'block');
+                    $('#error').html(response)
+                });
+            }
+
+        }
+
+    });
+
+
+
+
+
+var config = {
+            '.chosen-select'           : {},
+            '.chosen-select-deselect'  : {allow_single_deselect:true},
+            '.chosen-select-no-single' : {disable_search_threshold:10},
+            '.chosen-select-no-results': {no_results_text:'Oops, nothing found!'},
+            '.chosen-select-width'     : {width:"95%"}
+        };
+
+for (var selector in config) {
+    $(selector).chosen(config[selector]);
+}
+
+$('#my-awesome-dropzone').validator({
+    timely: 2,
+    theme: "yellow_right_effect",
+    fields: {
+        "hosts": {
+            rule: "required",
+            tip: "输入上传的主机",
+            ok: "",
+            msg: {required: "必须填写!"}
+        }
+    },
+    valid: function (form) {
+        form.submit();
+    }
+});
+</script>
+<script src="/static/js/cropper/cropper.min.js"></script>
+<script src="/static/js/datapicker/bootstrap-datepicker.js"></script>
+
+{% endblock %}

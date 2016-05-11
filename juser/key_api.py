@@ -1,0 +1,297 @@
+# coding: utf-8
+
+from Crypto.PublicKey import RSA
+from subprocess import call
+
+from juser.models import AdminGroup
+from jumpserver.api import *
+from jumpserver.settings import BASE_DIR, EMAIL_HOST_USER as MAIL_FROM
+from juser.models import AccessKey
+from jasset.models import Region, Assetgroup_Usergroup
+import os
+import commands
+from jasset.forms import AssetForm
+
+
+def db_add_key(**kwargs):
+    """
+    数据库中添加用户的access key
+    """
+    key = AccessKey(**kwargs)
+    key = key.save()
+
+    agroup_id = get_assetgroupid_by_usergroupid(kwargs['group_id'])
+    plat_id = int(kwargs['plat_id'])
+    sync_res = sync_host_list(agroup_id, plat_id, kwargs['key_id'], kwargs['key_secret'])
+
+    # sync_host_list(1, 1, 'XKlVo9bqlwQsh3Rr','oWGYAoiNEXZlSB8fTpbbYqFOb9Mayj')
+    return kwargs['plat_id']
+
+
+def db_del_key(key_id):
+    """
+    从数据库中删除accesskey,实际上是修改标识位
+    """
+    # key = get_object(AccessKey, key_id=key_id)
+    key = AccessKey.objects.get(key_id=key_id)
+    if key:
+        # key.delete()
+        key.if_del = 1
+        Asset.objects.filter(accesskey_id=key.key_id).update(if_del=1)
+        key.save()
+
+
+def db_update_key(**kwargs):
+    """
+    数据库更新用户Access Key信息
+    """
+    id = kwargs.pop('id')
+    key = AccessKey.objects.filter(id=id)
+    if key:
+        key.update(**kwargs)
+        sync_host_list(kwargs.group_id, kwargs.plat_id, kwargs.key_id, kwargs.key_secret)
+    else:
+        return None
+
+
+def sync_host_list(groupid, plat_id, key_id, key_secret):
+    """
+    新增或者更新过access key 之后同步主机信息
+    """
+    key_id = str(key_id)
+    key_secret = str(key_secret)
+    plat_id = int(plat_id)
+
+    ####阿里云平台####
+    if plat_id == 1:
+        host_list_all = []
+        region_list = Region.objects.filter(plat_id=1)
+        for region in region_list:
+            cmd = "/home/zsc/ali-ecs.py {0} {1} DescribeInstances RegionId={2}".format(key_id,key_secret,region.region_id)
+            status,host_list_tmp = commands.getstatusoutput(cmd)
+            host_list_tmp_json = json.loads(host_list_tmp)
+            if host_list_tmp_json['Instances']['Instance']:
+                host_list_all.append(host_list_tmp_json['Instances']['Instance'])
+        aa = auto_add_host(host_list_all, groupid, plat_id, key_id, 0)
+    ####UCloud####
+    elif plat_id == 2:
+        region_list = Region.objects.filter(plat_id=2)
+        for region in region_list:
+            host_list_all = []
+            cmd = "/home/zsc/u-ecs.py {0} {1} DescribeUHostInstance RegionId={2}".format(key_id,key_secret,region.region_id)
+            status,host_list_tmp = commands.getstatusoutput(cmd)
+            host_list_tmp_json = json.loads(host_list_tmp)
+            if host_list_tmp_json.has_key('UHostSet'):
+                host_list_all.append(host_list_tmp_json['UHostSet'])
+            aa = auto_add_host(host_list_all, groupid, plat_id, key_id, region.region_id)
+
+    return aa
+
+
+def auto_add_host(host_list_all, group_id, plat_id, key_id, region_id):
+    for host_list in host_list_all:
+        for host_info in host_list:
+            asset_group_all = AssetGroup.objects.all()
+            af = AssetForm()
+            default_setting = get_object(Setting, name='default')
+            default_port = default_setting.field2 if default_setting else ''
+            plat_id = int(plat_id)
+
+            if plat_id == 1:
+                data_insert = {
+                    'hostname' : host_info['InstanceId'],
+                    'host_name_show' : host_info['InstanceName'],
+                    'ip' : host_info['PublicIpAddress']['IpAddress'][0],
+                    'use_default_auth' : 1,
+                    'is_active' : 1,
+                    'port' : 22,
+                    'host_id' : host_info['InstanceId'],
+                    'plat_id' : plat_id,
+                    'accesskey_id' : key_id,
+                    'expire_time' : host_info['ExpiredTime'],
+                    'group' : [group_id],
+                    'run_status' : host_info['Status'],
+                    'band_width' : host_info['InternetMaxBandwidthOut'],
+                    'region_id' : host_info['RegionId'],
+                    'if_del' : 0
+                }
+                ip = host_info['PublicIpAddress']['IpAddress']
+                hostname = host_info['InstanceName']
+            else:
+                data_insert = {
+                    'hostname' : host_info['UHostId'],
+                    'host_name_show' : host_info['Name'],
+                    'ip' : host_info['IPSet'][1]['IP'] if len(host_info['IPSet'])>1 else host_info['IPSet'][0]['IP'],
+                    'use_default_auth' : 1,
+                    'is_active' : 1,
+                    'port' : 22,
+                    'host_id' : host_info['UHostId'],
+                    'plat_id' : plat_id,
+                    'accesskey_id' : key_id,
+                    'expire_time' : host_info['ExpireTime'],
+                    'group' : [group_id],
+                    'run_status' : host_info['State'],
+                    'band_width' : host_info['IPSet'][1]['Bandwidth'] if len(host_info['IPSet'])>1 else 0,
+                    'region_id' : region_id,
+                    'if_del' : 0
+                }
+                ip = host_info['IPSet'][1]['IP'] if len(host_info['IPSet'])>1 else host_info['IPSet'][0]['IP']
+                hostname = host_info['Name']
+
+            if_exist = Asset.objects.filter(host_id=unicode(hostname))
+            if if_exist:
+                if_exist = if_exist[0]
+                if key_id == if_exist.accesskey_id :
+                    return
+                else :
+                    if_exist.accesskey_id = key_id
+                    if_exist.save()
+                    return
+
+            af_post = AssetForm(data_insert)
+            # ip = host_info['PublicIpAddress']['IpAddress']
+            # hostname = host_info['InstanceName']
+            is_active = True
+            use_default_auth = True
+            # group = 1
+            try:
+                if Asset.objects.filter(hostname=unicode(hostname)):
+                    error = u'该主机名 %s 已存在!' % hostname
+                    raise ServerError(error)
+
+            except ServerError:
+                pass
+            else:
+                if af_post.is_valid():
+                    asset_save = af_post.save(commit=False)
+                    if not use_default_auth:
+                        password = 'password'
+                        password_encode = CRYPTOR.encrypt(password)
+                        asset_save.password = password_encode
+                    if not ip:
+                        asset_save.ip = hostname
+                    asset_save.is_active = True if is_active else False
+                    asset_save.save()
+                    af_post.save_m2m()
+
+                    msg = u'主机 %s 添加成功' % data_insert
+                    return msg
+                else:
+                    esg = u'主机 %s 添加失败' % data_insert
+                    return esg
+    return
+
+
+def restart_host(key_id, key_secret, host_id, plat_id, region_id):
+    """
+    :param key_id: 用户的key_id
+    :param key_secret: 用户的key_secret
+    :param host_id:平台主机ID
+    :return:返回执行结果
+    """
+    plat_id = int(plat_id)
+    if plat_id == 1:
+        cmd = "/home/zsc/ali-ecs.py  {0}  {1} RebootInstance InstanceId={2}".format(key_id, key_secret, host_id)
+        status,res_restart = commands.getstatusoutput(cmd)
+        return res_restart
+    elif plat_id == 2:
+        cmd = "/home/zsc/u-ecs.py  {0}  {1} RebootInstance UHostId={2} RegionId={3}".format(key_id, key_secret, host_id, region_id)
+        status,res_restart = commands.getstatusoutput(cmd)
+        return res_restart
+
+
+def start_host(key_id, key_secret, host_id, plat_id, region_id):
+    """
+    :param key_id: 用户的key_id
+    :param key_secret: 用户的key_secret
+    :param host_id:平台主机ID
+    :return:返回执行结果
+    """
+    plat_id = int(plat_id)
+    if plat_id == 1:
+        cmd = "/home/zsc/ali-ecs.py  {0}  {1} StartInstance InstanceId={2}".format(key_id, key_secret, host_id)
+        status,res_start = commands.getstatusoutput(cmd)
+
+        if "Code" in res_start:
+            return False
+        else:
+            asset = Asset.objects.get(host_id=host_id)
+            asset.run_status = 'Running'
+            asset.save()
+            return True
+    elif plat_id == 2:
+        cmd = "/home/zsc/u-ecs.py  {0}  {1} StartUHostInstance UHostId={2} RegionId={3}".format(key_id, key_secret, host_id, region_id)
+        status,res_start = commands.getstatusoutput(cmd)
+        res_start = json.loads(res_start)
+        if res_start['RetCode'] == 0:
+            asset = Asset.objects.get(host_id=host_id)
+            asset.run_status = 'Running'
+            asset.save()
+            return True
+        else:
+            return False
+
+
+
+def stop_host(key_id, key_secret, host_id, plat_id, region_id):
+    """
+    :param key_id: 用户的key_id
+    :param key_secret: 用户的key_secret
+    :param host_id:平台主机ID
+    :return:返回执行结果
+    """
+    plat_id = int(plat_id)
+    if plat_id == 1:
+        cmd = "/home/zsc/ali-ecs.py  {0}  {1} StopInstance InstanceId={2}".format(key_id,key_secret,host_id)
+        status,res_stop = commands.getstatusoutput(cmd)
+
+        if "Code" in res_stop:
+            return False
+        else:
+            asset = Asset.objects.get(host_id=host_id)
+            asset.run_status = 'Stopped'
+            asset.save()
+            return True
+    elif plat_id == 2:
+        cmd = "/home/zsc/u-ecs.py  {0}  {1} StopUHostInstance UHostId={2} RegionId={3}".format(key_id, key_secret, host_id, region_id)
+        status,res_start = commands.getstatusoutput(cmd)
+        res_start = json.loads(res_start)
+        if res_start['RetCode'] == 0:
+            asset = Asset.objects.get(host_id=host_id)
+            asset.run_status = 'Stopped'
+            asset.save()
+            return True
+        else:
+            return False
+
+
+def sync_ali_region_list():
+    """
+    同步阿里云平台的地区数据，用于同步主机列表
+    """
+    cmd = './ecst.py {0} '.format('DescribeRegions')
+    # cmd = "pwd"
+    # region_list = os.popen(cmd).readlines()
+    status,region_list = commands.getstatusoutput(cmd)
+
+    region_list_json = json.loads(region_list)
+    region_list_all = region_list_json['Regions']['Region']
+
+    aa = []
+    for region in region_list_all:
+        region_m = Region(plat_id=1, region_id=region['RegionId'], region_name=region['LocalName'])
+        region_m.save()
+        aa.append(region['RegionId'])
+    return aa
+
+
+def get_assetgroupid_by_usergroupid(usergroup_id):
+    assetgroup = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_id)
+    if assetgroup:
+        return assetgroup[0].assetgroup_id
+    else:
+        return 0
+
+
+# def get_assetgroupid_by_usergroupid(**kwargs):
+#     return kwargs['uid']

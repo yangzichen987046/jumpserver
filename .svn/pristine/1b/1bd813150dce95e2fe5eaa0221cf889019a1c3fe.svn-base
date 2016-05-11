@@ -1,0 +1,6 @@
+/*@import url("//fonts.useso.com/css?family=Open+Sans:300,400,600,700&amp;lang=en");*/
+
+.numb p{line-height: 1.5;  padding-left: 50px;  padding-top: 10px;  color: #0096F0;  font-size: 16px;  margin: 0; }
+.numb p span {color: #333;  font-size: 24px;  margin: 0;}
+#main{height:432px;}
+

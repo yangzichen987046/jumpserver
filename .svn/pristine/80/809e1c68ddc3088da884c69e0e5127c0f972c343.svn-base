@@ -1,0 +1,64 @@
+# coding: utf-8
+from __future__ import division
+import xlrd
+import xlsxwriter
+from django.db.models import AutoField
+from jumpserver.api import *
+from jasset.models import ASSET_STATUS, ASSET_TYPE, ASSET_ENV, IDC, AssetRecord, Assetgroup_Usergroup, Asset_Group, Region
+from jperm.ansible_api import MyRunner
+from jperm.perm_api import gen_resource
+from jumpserver.templatetags.mytags import get_disk_info
+from juser.models import AccessKey, User_Group
+from juser.key_api import auto_add_host, get_assetgroupid_by_usergroupid
+import commands
+
+
+def get_assetgroup_by_usergroup(usergroup_id):
+    """
+    根据用户组获取所有的主机组
+    """
+    group_all = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_id)
+    assetgroup_id = []
+    if group_all:
+        for agroup in group_all:
+            assetgroup_id.append(agroup.assetgroup_id)
+    return assetgroup_id
+
+
+def db_save_assetgroup_usergroup(assetgroup_id, usergroup_id):
+    """
+    保存用户组与主机组的关联关系
+    """
+    if Assetgroup_Usergroup.objects.filter(assetgroup_id=assetgroup_id).filter(usergroup_id=usergroup_id):
+        return
+    else:
+        group = Assetgroup_Usergroup(
+            assetgroup_id=assetgroup_id,
+            usergroup_id=usergroup_id)
+        group.save()
+
+
+def get_asset_by_usergroup(usergroup_id):
+    """
+    根据用户组查询所有主机
+    """
+    assetgroup_id = get_assetgroup_by_usergroup(usergroup_id)
+    asset_group_all = Asset_Group.objects.all().filter(assetgroup_id__in=assetgroup_id)
+    asset_id = []
+    for a_group in asset_group_all:
+        asset_id.append(a_group.asset_id)
+    asset_all = Asset.objects.all().filter(id__in=asset_id).filter(if_del=0)
+    return asset_all
+
+
+def get_usergroup_by_asset(host_id):
+    """
+    根据主机host_id查询所属用户组
+    """
+    asset_detail = Asset.objects.get(host_id=host_id)
+    asset_group = Asset_Group.objects.get(asset_id=asset_detail.id)
+    group = Assetgroup_Usergroup.objects.all().filter(assetgroup_id=asset_group.assetgroup_id)
+    # return asset_group.id
+    return group[0].usergroup_id
+
+

@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% load humanize %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+<div class="wrapper wrapper-content no-padding">
+    <div class="row wid">
+        <div class="col-md-9" >
+            <div class="col-md-12">
+                <div class="row" >
+                 <form id="asset_form">
+                    <label>
+                        <select name="usergroup_name" id="usergroup_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;" onchange="get_proj_list()">
+                            <option value="">客户</option>
+                            {% for usergroup in usergroup_all %}
+                            <option value="{{ usergroup.id }}">{{ usergroup.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <select id="site_name" name="site_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;"  onchange="change_info()">
+                            <option value="">项目</option>
+                            {% for site in site_list %}
+                            <option value="{{ site.id }}" >{{ site.province }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                 </form>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="row"id="main" >
+
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 numb">
+            <p>实时总访问量<br><span>540</span></p>
+            <p>当天访问量<br><span>97,210</span></p>
+            <p>当月访问量<br><span>2,962,470</span></p>
+            <p>日最低访问量<br><span>97,210</span></p>
+            <p>日平均访问量<br><span>227,880</span></p>
+            <p>日最高访问量<br><span>264,480</span></p>
+        </div>
+    </div>
+</div>
+    <div class="pic-all">
+        <div class="pic">
+            <div class="spin text-center">
+                <i class="fa fa-chevron-left"></i>
+            </div>
+        </div>
+        <div class="pic-m">
+        <div class="col-md-12" id="b-left" ></div>
+        <div class="col-md-12" id="b-right"></div>
+        <div class="col-md-12">
+            <p>1</p>
+            <p>1</p>
+            <p>1</p>
+            <p>1</p>
+            <p>1</p>
+            <p>1</p>
+            <p>1</p>
+        </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block self_footer_js %}
+<script src="/static/js/echarts/echarts.js"></script>
+<script>
+(function($){
+    $.getUrlParam = function(name)
+    {
+        var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r!=null) return unescape(r[2]); return null;
+    }
+})(jQuery);
+
+$(document).ready(function() {
+    $(".spin").click(function() {
+        $(".pic-all").toggleClass("xx")
+        $(".pic").find("i").toggleClass("fa-chevron-right")
+    });
+})
+
+require.config({
+    paths: {
+        'echarts': '/static/js/echarts/chart',
+        'echarts/chart/line': '/static/js/echarts/chart/line',
+        'echarts/chart/pie': '/static/js/echarts/chart/pie',
+        'echarts/chart/map': '/static/js/echarts/chart/map'
+    }
+});
+
+require(
+    [
+        'echarts',
+        'echarts/chart/line' // 使用柱状图就加载bar模块，按需加载
+    ],
+    function (ec) {
+        // 基于准备好的dom，初始化echarts图表
+        var myChart = ec.init(document.getElementById('b-right'));
+        myChart.showLoading({
+            text: "图表数据正在努力加载..."
+        });
+        option = {//图表选项，包含图表实例任何可配置选项： 公共选项 ， 组件选项 ， 数据选项
+            backgroundColor: '#f3f3f4',
+            grid:{
+                borderWidth:0
+            },
+            title : {//标题
+                text: '当月每天的访问量',
+                x: 'left',
+                textStyle : {
+                    color: '#333'
+                }
+            },
+            tooltip : {//提示框（详见tooltip），鼠标悬浮交互时的信息提示
+                trigger: 'axis',
+                color:'#c2c2c2',
+                axisPointer: {
+                    lineStyle: {
+                        color: '#c2c2c2'
+                    }
+                }
+            },
+            xAxis : [//直角坐标系中横轴数组
+                {
+                    type : 'category',//坐标轴类型，横轴默认为类目型'category'，纵轴默认为数值型'value'
+                    boundaryGap : false,//类目起始和结束两端空白策略，见下图，默认为true留空，false则顶头
+                    axisLabel:{
+                        rotate:45,
+                        textStyle : {
+                            color: '#333'
+                        }
+                    },
+                    axisTick:{
+                        show:true,
+                        lineStyle:{
+                            color: '#c2c2c2',
+                            width: 1
+                        }
+                    },
+                    splitArea:{
+                        show:false
+                    },
+                    splitLine:{
+                        show:false
+                    },
+                    axisLine:{
+                        show:true,
+                        onZero: false,
+                        lineStyle:{
+                            color: '#AFABAB',
+                            width: 1
+                        }
+                    },
+                    data : ['周一','周二','周三','周四','周五','周六','周日']
+                }
+            ],
+            yAxis : [//直角坐标系中纵轴数组
+                {
+                    type : 'value',
+                    axisLabel:{
+                        textStyle : {
+                            color: '#333'
+                        }
+                    },
+                    axisLine:{
+                        show:true,
+                        lineStyle:{
+                            color: '#AFABAB',
+                            width: 1
+                        }
+                    },
+                    splitArea:{
+                        show:false
+                    },
+                    splitLine:{
+                        show:false
+                    }
+                }
+            ],
+            series : [//驱动图表生成的数据内容（详见series），数组中每一项代表一个系列的特殊选项及数据
+                {
+                    name:'成交',
+                    type:'line',//图表类型，必要参数！如为空或不支持类型，则该系列数据不被显示。
+                    smooth:true,//平滑曲线显示，smooth为true时lineStyle不支持虚线
+                    itemStyle:{
+                        normal:{
+                            barBorderRadius:0,
+                            color:'#0096F0',
+                            areaStyle: {
+                                type: 'default',
+                                color:'#0096F0'
+                            }
+                        }
+                    },
+                    data:[220, 222, 321, 524, 260, 830, 710]
+                }
+            ]
+        };
+        // 为echarts对象加载数据
+        myChart.hideLoading();
+        myChart.setOption(option);
+    }
+);
+
+require(
+    [
+        'echarts',
+        'echarts/chart/line' // 使用柱状图就加载bar模块，按需加载
+    ],
+    function (ec) {
+        // 基于准备好的dom，初始化echarts图表
+        var myChart = ec.init(document.getElementById('b-left'));
+        myChart.showLoading({
+            text: "图表数据正在努力加载..."
+        });
+        option = {
+            backgroundColor: '#f3f3f4',
+            grid:{
+                borderWidth:0
+            },
+            dataZoom : {
+                show : true,
+                realtime : true,
+                start : 0,
+                end : 100,
+                dataBackgroundColor:'#000'
+            },
+            title : {
+                text: '每5分钟访问量',
+                x: 'left',
+                textStyle : {
+                    color: '#333'
+                }
+            },
+            tooltip : {
+                trigger: 'axis',
+                color:'#c2c2c2',
+                axisPointer:{
+                    lineStyle:{
+                        color:'#c2c2c2'
+                    }
+                }
+            },
+            xAxis : [
+                {
+                    type : 'category',
+                    boundaryGap : false,
+                    axisLabel:{
+
+                        textStyle : {
+                            color: '#333'
+                        }
+                    },
+                    axisTick:{
+                        show:true,
+                        lineStyle:{
+                            color: '#c2c2c2',
+                            width: 1
+                        }
+                    },
+                    splitArea:{
+                        show:false
+                    },
+                    splitLine:{
+                        show:false
+                    },
+                    axisLine:{
+                        show:true,
+                        onZero: false,
+                        lineStyle:{
+                            color: '#AFABAB',
+                            width: 1
+                        }
+                    },
+                    data : function (){
+                        var list = [];
+                        for (var i = 1; i <= 30; i++) {
+                            list.push('2013-03-' + i);
+                        }
+                        return list;
+                    }()
+                }
+            ],
+            yAxis : [
+                {
+                    type : 'value',
+                    axisLabel:{
+                        textStyle : {
+                            color: '#333'
+                        }
+                    },
+                    axisLine:{
+                        show:true,
+                        lineStyle:{
+                            color: '#AFABAB',
+                            width: 1
+                        }
+                    },
+                    splitArea:{
+                        show:false
+                    },
+                    splitLine:{
+                        show:false
+                    }
+                }
+            ],
+            series : [
+                {
+                    name:'最高',
+                    type:'line',
+                    itemStyle:{
+                        normal:{
+                            barBorderRadius:0,
+                            color:'#0096F0',
+                            areaStyle: {
+                                type: 'default',
+                                color:'#0096F0'
+                            }
+                        }
+                    },
+                    data:function (){
+                        var list = [];
+                        for (var i = 1; i <= 30; i++) {
+                            list.push(Math.round(Math.random()* 30));
+                        }
+                        return list;
+                    }()
+                }
+            ]
+        };
+        // 为echarts对象加载数据
+        myChart.hideLoading();
+        myChart.setOption(option);
+    }
+);
+
+var main = $(window).height()-159;
+var pi_width = $(".wid").width()*0.666
+$("#main").css("height",main);
+$(".pic-m").css({"height":main,"width":pi_width});
+$(".pic-all").css({"display":"block","margin-right":-(pi_width+15),"width":pi_width+40,"height":main});
+
+$(window).resize(function() {
+    var main=$(window).height()-159;
+    var pi_width=$(".wid").width()*0.666
+    $("#main").css("height",main)
+    $(".pic-m").css({"height":main,"width":pi_width});
+    $(".pic-all").css({"display":"block","margin-right":-(pi_width+15),"width":pi_width+40,"height":main});
+})
+
+function get_proj_list()
+{
+    var usergroup_name = $("#usergroup_name").val()
+    $('#usergroup_name').val(usergroup_name)
+    url = '{% url 'jump_get_site_list' %}'
+    data = {usergroup_id: usergroup_name}
+    $.ajax({
+        type:'post',
+        url:url,
+        data:data,
+        success:function(data){
+            var arr = new Array();
+            data = JSON.parse(data);
+            arr = data;
+            $("#site_name").empty();
+            $("#site_name").append('<option value="">请选择站点</option>')
+            for(var i=0;i<arr.length;i++) {
+                $("#site_name").append('<option value="' + arr[i].pk + '">' + arr[i].fields.site_name + '</option>');
+            }
+        },
+        error:function(){
+            alert(2)
+        }
+    });
+}
+
+function change_info(){
+    new_pic();
+}
+
+function new_pic()
+{
+    var usergroup_name = $.getUrlParam('usergroup_name')
+    if(usergroup_name !==null && usergroup_name !=="") {
+        $("#usergroup_name").find("option").each(function () {
+            $("option[value='" + usergroup_name + "']").attr("selected", true);
+        })
+    }
+    var site_name = $.getUrlParam('site_name')
+    if(site_name !==null && site_name !=="") {
+        $("#site_name").find("option").each(function () {
+            $("option[value='" + site_name + "']").attr("selected", true);
+        })
+    }
+
+    var site_id = $("#site_name").val()
+    data = {site_id:site_id};
+    $.ajax({
+        type: "post",
+        async: false, //同步执行
+        data:data,
+        url : "{% url 'jump_get_pic_data' %}",
+        dataType: "json", //返回数据形式为json
+        success: function (data) {
+            if (data) {
+                location_all_tmp = JSON.stringify(data.location_all)
+                location_all_tmp = location_all_tmp.replace(/\["/g,"[");
+                location_all_tmp = location_all_tmp.replace(/\"]/g,"]");
+                location_all_tmp = JSON.parse(location_all_tmp)
+                return drewChart(data.line_data, data.point_data, location_all_tmp);
+{#                alert(location_all_tmp);#}
+            }
+        },
+        error: function (errorMsg) {
+            alert("不好意思，大爷，图表请求数据失败啦!");
+        }
+    });
+}
+
+function drewChart(mark_line_data, mark_point_data, location_all) {
+    require(
+            [
+                'echarts',
+                'echarts/chart/map'
+            ],
+            function (ec) {
+                // 基于准备好的dom，初始化echarts图表
+                var myChart = ec.init(document.getElementById('main'));
+                myChart.showLoading({
+                    text: "图表数据正在努力加载..."
+                });
+                option = {
+                    backgroundColor: '#f3f3f4',
+                    color: ['gold', 'aqua', 'lime'],
+                    title: {
+                        text: '',
+                        subtext: '',
+                        x: 'center',
+                        textStyle: {color: '#fff'}
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        x: 'left',
+                        data: [],
+                        selectedMode: 'single',
+                        selected: {'上海 Top10': true},
+                        textStyle: {color: '#fff'}
+                    },
+                    toolbox: {
+                        show: false,
+                        orient: 'vertical',
+                        x: 'right',
+                        y: 'center',
+                        feature: {
+                            mark: {show: true},
+                            dataView: {show: true, readOnly: false},
+                            restore: {show: true},
+                            saveAsImage: {show: true}
+                        }
+                    },
+                    dataRange: {
+                        show: true,
+                        calculable: true,
+                        min: 0,
+                        max: 100,
+                        x: 0,
+                        y: '60%',
+                        color: ['#ff3333', 'orange', 'yellow', 'lime', 'aqua'],
+                        textStyle: {color: '#000'}
+                    },
+                    series: [
+                        {
+                            name: '全国',
+                            type: 'map',
+                            roam: true,
+                            hoverable: false,
+                            mapType: 'china',
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: true,
+                                        textStyle: {
+                                            color: 'rgba(100,149,237,1)'
+                                        }
+                                    },
+                                    borderColor: 'rgba(100,149,237,1)',
+                                    borderWidth: 0.5,
+                                    areaStyle: {
+                                        color: '#ccc'
+                                    }
+                                }
+                            },
+                            data: [],
+                            geoCoord: {
+                                'site_name1': [121.4648, 31.2891],
+                                'yn': [11.4648, 31.2891],
+                                'nmg': [113.8953, 22.901],
+                                'gd': [118.7073, 37.5513],
+                                'sh': [113.4229, 22.478],
+                            },
+                            geoCoord: location_all,
+                        },
+                        {
+                            name: '上海 Top10',
+                            type: 'map',
+                            mapType: 'china',
+                            data: [],
+                            markLine: {
+                                smooth: true,
+                                effect: {
+                                    show: true,
+                                    scaleSize: 1,
+                                    period: 30,
+                                    color: '#fff',
+                                    shadowBlur: 10
+                                },
+                                itemStyle: {
+                                    normal: {
+                                        borderWidth: 1,
+                                        label: {show: true},
+                                        lineStyle: {
+                                            type: 'solid',
+                                            shadowBlur: 10
+                                        }
+                                    }
+                                },
+                                data: mark_line_data,
+                            },
+                            markPoint: {
+                                symbol: 'emptyCircle',
+                                symbolSize: function (v) {
+                                    return 10 + v / 10
+                                },
+                                effect: {
+                                    show: true,
+                                    shadowBlur: 0
+                                },
+                                itemStyle: {
+                                    normal: {
+                                        label: {show: false}
+                                    },
+                                    emphasis: {
+                                        label: {position: 'top'}
+                                    }
+                                },
+                                data: mark_point_data,
+                            }
+                        }
+                    ]
+                };
+                // 为echarts对象加载数据
+                myChart.hideLoading();
+                myChart.setOption(option);
+            }
+    );
+}
+</script>
+
+{% endblock %}

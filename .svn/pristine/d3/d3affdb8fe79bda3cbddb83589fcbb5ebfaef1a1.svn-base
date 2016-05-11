@@ -1,0 +1,17 @@
+/*@import url("//fonts.useso.com/css?family=Open+Sans:300,400,600,700&amp;lang=en");*/
+
+.numb p{line-height: 1.5;  padding-left: 50px;  padding-top: 10px;  color: #0096F0;  font-size: 16px;  margin: 0; }
+.numb p span {color: #333;  font-size: 24px;  margin: 0;}
+.spin{ background: #1ab394; position: absolute; padding: 7px 10px 7px 13px;  border-radius: 20px 0px 0px 20px;  font-size: 16px;  top: 0;  left: 0px;  width: 40px;  color: #fff;  cursor: pointer;  }
+.pic{position:absolute;left:0px;overflow: hidden;width:40px;height:36px;top:130px;}
+.spin{float:right;z-index:9999;width:40px;height:36px;padding:0px;}
+.spin i{line-height: 36px;}
+.pic-all{display:none;position: absolute;top:0px;right:15px;transition-duration: 0.8s;}
+.pic-m{overflow-y:scroll;z-index: 9999;position: absolute;top:120px;right:0px; background:#f3f3f4;float: right;webkit-box-shadow: 0 5px 15px rgba(0,0,0,.5); box-shadow: 0 5px 15px rgba(0,0,0,.5);}
+.xx{  margin-right:-15px !important; transition-duration: 0.8s;  }
+#b-left{height:50%;}
+#b-right{height:50%;}
+#page-wrapper{min-height: 0px !important;}
+#wrapper{overflow:hidden;}
+
+

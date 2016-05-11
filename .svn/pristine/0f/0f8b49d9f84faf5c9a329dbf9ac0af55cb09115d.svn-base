@@ -1,0 +1,107 @@
+# coding: utf-8
+
+from Crypto.PublicKey import RSA
+from subprocess import call
+
+from juser.models import AdminGroup
+from jumpserver.api import *
+from jumpserver.settings import BASE_DIR, EMAIL_HOST_USER as MAIL_FROM
+from juser.models import AccessKey
+from jasset.models import Region
+import os
+import commands
+
+def db_add_key(**kwargs):
+    """
+    数据库中添加用户的access key
+    """
+    key = AccessKey(**kwargs)
+    key = key.save()
+    return key
+
+
+def db_del_key(username):
+    """
+    从数据库中删除用户
+    """
+    user = get_object(AccessKey, key_id=username)
+    if user:
+        user.delete()
+
+
+def db_update_key(**kwargs):
+    """
+    数据库更新用户Access Key信息
+    """
+    id = kwargs.pop('id')
+    key = AccessKey.objects.filter(id=id)
+    if key:
+        key.update(**kwargs)
+    else:
+        return None
+
+
+def sync_host_list(key_id, key_secret, plat_id=1):
+    """
+    新增或者更新过access key 之后同步主机信息
+    """
+
+    key_id = str(key_id)
+    key_secret = str(key_secret)
+    ####阿里云平台####
+    if plat_id == 1:
+        region_list = Region.objects.filter(plat_id=1)
+        # region_list = Region.objects.all(plat_id=1)
+        # region_list = get_object(Region,plat_id=1)
+        host_list_all = []
+        cmd_all = []
+        for region in region_list:
+            cmd = "/home/zsc/ecs-test.py  " + key_id + " " + key_secret + " DescribeInstances RegionId=" + region.region_id
+            status,host_list_tmp = commands.getstatusoutput(cmd)
+            # if host_list:
+            host_list_tmp_json = json.loads(host_list_tmp)
+            if host_list_tmp_json['Instances']['Instance']:
+                host_list_all.append(host_list_tmp_json['Instances']['Instance'])
+            cmd_all.append(cmd)
+        return host_list_all
+    ####UCloud####
+    elif plat_id == 2:
+        cmd = ''
+        tmp = os.popen(cmd).readlines()
+
+    return tmp
+
+
+def sync_ali_regiod_list():
+    """
+    同步阿里云平台的地区数据，用于同步主机列表
+    """
+    cmd = './ecst.py {0} '.format('DescribeRegions')
+    # cmd = "pwd"
+    # region_list = os.popen(cmd).readlines()
+    status,region_list = commands.getstatusoutput(cmd)
+
+    region_list_json = json.loads(region_list)
+    region_list_all = region_list_json['Regions']['Region']
+
+    aa = []
+    for region in region_list_all:
+        region_m = Region(plat_id=1, region_id=region['RegionId'])
+        region_m.save()
+        aa.append(region['RegionId'])
+    return aa
+
+def restart_host(key_id, key_secret,host_id):
+    cmd = "/home/zsc/ecs-test.py  {0}  {1} RebootInstance InstanceId={2}".format(key_id,key_secret,host_id)
+    status,res_restart = commands.getstatusoutput(cmd)
+    return res_restart
+
+def start_host(key_id, key_secret,host_id):
+    cmd = "/home/zsc/ecs-test.py  {0}  {1} StartInstance InstanceId={2}".format(key_id,key_secret,host_id)
+    status,res_start = commands.getstatusoutput(cmd)
+    return res_start
+
+def stop_host(key_id, key_secret,host_id):
+    cmd = "/home/zsc/ecs-test.py  {0}  {1} StopInstance InstanceId={2}".format(key_id,key_secret,host_id)
+    status,res_stop = commands.getstatusoutput(cmd)
+    return res_stop

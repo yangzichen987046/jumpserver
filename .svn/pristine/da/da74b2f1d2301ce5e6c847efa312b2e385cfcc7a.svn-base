@@ -1,0 +1,19 @@
+from django.db import models
+import datetime
+from jasset.models import Asset, AssetGroup
+from juser.models import User, UserGroup
+
+# Create your models here.
+
+class Project(models.Model):
+    proj_name = models.CharField(max_length=30)
+    release_host_name = models.CharField(max_length=30)
+    release_host_ip = models.CharField(max_length=30)
+    release_host_id = models.CharField(max_length=30)
+    cluster_id = models.CharField(max_length=30)
+    cluster_name= models.CharField(max_length=30)
+    if_del= models.CharField(max_length=4)
+    add_time=models.CharField(max_length=15)
+    def __unicode__(self):
+        return self.pro_name
+

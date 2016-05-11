@@ -1,0 +1,204 @@
+# -*- coding: utf-8 -*-
+
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from django.core import serializers
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import AccessKey, User_Group
+from jasset.models import Asset, IDC, AssetGroup, ASSET_TYPE, ASSET_STATUS, Assetgroup_Usergroup, Asset_Group
+import json
+import time
+from jauto.models import *
+from django.contrib.sessions.models import Session
+from jauto.install_api import *
+from jperm.ansible_api import *
+
+# Create your views here.
+
+
+@require_role(role='super')
+def program_add(request):
+    """
+    提交安装应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        asset_all = request.POST.getlist('asset', '')
+        program_all = request.POST.getlist('program', '')
+
+        # assets_obj = [Asset.objects.get(host_id=asset_id) for asset_id in asset_all]
+        # calc_assets = list(set(assets_obj))
+        # push_resource = gen_resource(calc_assets)
+        # task = MyTask(push_resource)
+        # ret = {}
+        # ret = task.program_install(shell)
+
+        for program in program_all:
+            for asset in asset_all:
+                token = make_token()
+                ip = Asset.objects.get(host_id=asset)['ip'],
+                program_script = Application.objects.get(app_name=program)['script_name']
+                if 'tomcat' in program:
+                    shell = 'ssh root@{0} /root/{1} {2} {3} {4} {5} {6} {7}'.format(ip, program_script, ip, token)
+                elif ('zabbix_agent' in program) or ('zabbix_proxy' in program):
+                    shell = 'ssh root@{0} /root/{1} {2} {3} {4}'.format(ip, program_script, ip, token)
+                else:
+                    shell = 'ssh root@{0} /root/{1} {2} {3}'.format(ip, program_script, ip, token)
+
+                status, shell_res = commands.getstatusoutput(shell)
+
+                db_add_install(
+                    host_id=asset,
+                    ip=ip,
+                    app_name=program,
+                    status=0,
+                    apply_time=time.time(),
+                    token=token
+                )
+        return HttpResponse(asset)
+    return my_render('jauto/program_add.html', locals(), request)
+
+
+@require_role(role='super')
+def program_status(request):
+    """
+    查看安装进度
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '安装进度', '自动化管理', '安装进度查询'
+    app_all = Application.objects.all()
+    app_list = Install.objects.all()
+    usergroup_all = UserGroup.objects.all()
+    asset_all = Asset.objects.all().filter(if_del=0)
+
+    asset_name = request.GET.get('asset_name', '')
+
+    # app_name = request.GET.get('app', '')
+    # group = request.GET.get('group', '')
+    # usergroupid = request.GET.get('usergroupid', '')
+    
+    # if usergroupid:
+    #     program_all = get_object(UserGroup, name=usergroupid)
+    #     # program_all = UserGroup.objects.all().filter(name=usergroupid)
+    #
+    #
+    #     # a_u_group = []
+    #     # for a_u_group_tmp in program_all:
+    #     #     a_u_group.append(a_u_group_tmp.assetgroup_id)
+    #     # return HttpResponse(a_u_group.assetgroup_id)
+    #     asset_user_group=get_object(Assetgroup_Usergroup, usergroup_id=program_all.id)
+    #     return HttpResponse(asset_user_group.assetgroup_id)
+
+
+    # a_u_group = []
+    # for a_u_group_tmp in asset_user_group:
+    #         a_u_group.append(a_u_group_tmp.assetgroup_id)
+    # asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+    # asset_idd=greturn HttpResponse(asset_id.asset_id)et_object(Asset_Group, assetgroup_id=asset_user_group.assetgroup_id)
+    # asset_list=get_object(Asset, id=asset_idd.asset_id)
+    # return HttpResponse(asset_id.asset_id)
+    # if group:
+    #     if app_name:
+    #         app_list = Install.objects.all().filter(app_name=app_name).filter(host_id=group)
+    #     else:
+    #         app_list = Install.objects.all().filter(host_id=group)
+    # else:
+    #     if app_name:
+    #         app_list = Install.objects.all().filter(app_name=app_name)
+    #     else:
+    #         app_list = Install.objects.all()
+
+    # if group and app_name:
+    #     app_list = Install.objects.all().filter(host_id=group and app_name=app_name)
+    return my_render('jauto/program_status.html', locals(), request)
+
+
+# @require_role(role='super')
+def update_install_status(request):
+    """
+    封装方法，提供API给脚本回写状态
+    """
+    ip = request.GET.get('ip', '')
+    app = request.GET.get('app', '')
+    status = request.GET.get('status', '')
+    token = request.GET.get('token', '')
+    installing = Install.objects.filter(ip=ip).get(app_name=app)
+
+    # time_now = time
+    # if apply_time+
+    if installing.token == token:
+        installing.status = status
+        installing.save()
+    return HttpResponse(0)
+
+
+@require_role(role='super')
+def program_list(request):
+    """
+    应用列表
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用列表', '自动化管理', '应用列表查询'
+    app_all = Application.objects.all()
+    return my_render('jauto/program_list.html', locals(), request)
+
+
+@require_role(role='super')
+def program_list_add(request):
+    """
+    新增应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        group_name = request.POST.get('group_name', '')
+        users_selected = request.POST.getlist('users_selected', '')
+    return my_render('jauto/program_list_add.html', locals(), request)
+
+
+@require_role(role='super')
+def program_list_edit(request):
+    """
+    编辑应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '添加应用列表', '自动化管理', '添加应用列表'
+    program_id = request.GET.get('id', '')
+    program_all = get_object(Application, id=program_id)
+    app_all = Application.objects.all()
+    return my_render('jauto/program_list_edit.html', locals(), request)
+
+
+@require_role('admin')
+def get_asset_list(request):
+    usergroup_id = request.POST.get('usergroup_id', '')
+
+    asset_user_group = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_id)
+    a_u_group = []
+    a_group = []
+    for a_u_group_tmp in asset_user_group:
+        a_u_group.append(a_u_group_tmp.assetgroup_id)
+        asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+        for a_group_tmp in asset_group:
+            a_group.append(a_group_tmp.asset_id)
+            data = Asset.objects.all().filter(id__in=a_group).filter(if_del=0)
+        data = serializers.serialize('json',data)
+
+    return HttpResponse(data)

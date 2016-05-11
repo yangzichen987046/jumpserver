@@ -1,0 +1,12 @@
+# coding: utf-8
+from __future__ import division
+from jrelease.models import *
+
+
+def db_proj_add(**kwargs):
+    """
+    add project to db
+    添加项目时数据库操作函数
+    """
+    project = Project(**kwargs)
+    project.save()

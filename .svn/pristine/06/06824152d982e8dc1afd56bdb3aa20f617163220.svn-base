@@ -1,0 +1,14 @@
+from django.db import models
+import datetime
+from jasset.models import Asset, AssetGroup
+from juser.models import User, UserGroup
+
+# Create your models here.
+
+class Application(models.Model):
+    app_name = models.CharField(max_length=80, unique=True)
+    if_del = models.BooleanField(default=True)
+    def __unicode__(self):
+        return self.app_name
+
+

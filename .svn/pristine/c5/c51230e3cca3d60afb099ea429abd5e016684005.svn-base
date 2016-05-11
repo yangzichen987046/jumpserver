@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+ <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-10">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>填写基本信息</h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="ibox-content">
+                        <form method="post" id="ruleForm" class="form-horizontal" action="">
+                            {% if error %}
+                                <div class="alert alert-warning text-center">{{ error }}</div>
+                            {% endif %}
+                            {% if msg %}
+                                <div class="alert alert-success text-center">{{ msg }}</div>
+                            {% endif %}
+                            <div class="form-group">
+                                <label for="user" class="col-sm-2 control-label">用户组</label>
+                                <div class="col-sm-8">
+                                    <select name="user" id="user" data-placeholder="请选择用户" class=" form-control m-b">
+                                    <option value="0">请选择</option>
+{#                                        {% for asset_group in asset_groups.object_list %}#}
+{#                                            <option value="{{ asset_group.id }}" >{{ asset_group.name }}</option>#}
+{#                                        {% endfor %}#}
+                                   {% for group in user_group_list %}
+                                        <option value="{{ group.id }}">{{ group.name }}</option>
+                                    {% endfor %}
+                                    </select>
+{#                                    <span class="help-block m-b-none">用户和用户组必选一个</span>#}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="user" class="col-sm-2 control-label">主机列表</label>
+                                <div class="col-sm-8">
+                                    <div class="check">
+                                        {% for asset in asset_all %}
+                                            <div class="col-xs-6">
+                                                <input name="asset" class="testasset" id="{{ asset.id}}" type="checkbox" value="{{ asset.host_id }}">
+                                                <label for="{{ asset.host_id }}">{{ asset.hostname }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+{#                                    <span class="help-block m-b-none">用户和用户组必选一个</span>#}
+                                </div>
+                            </div>
+                        
+                            <div class="form-group">
+                                <label for="role" class="col-sm-2 control-label">应用<span class="red-fonts">*</span></label>
+                                <div class="col-sm-8"　id="role_name">
+                                    <div class="check">
+                                        {% for app in app_all %}
+                                            <div class="col-xs-6">
+                                               <input name="program" class="testasset" id="{{ app.id}}" type="checkbox" value="{{ app.app_name }}">
+                                               <label for="{{ app.id }}">{{ app.app_name }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="hr-line-dashed"></div>
+                            <div class="form-group">
+                                <div class="col-sm-4 col-sm-offset-2">
+                                    <button class="btn btn-white" type="reset">取消</button>
+                                    <button id="submit_button" class="btn btn-primary" type="submit">确认保存</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog"
+   aria-labelledby="myModalLabel" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <button type="button" class="close"
+               data-dismiss="modal" aria-hidden="true">
+                  &times;
+            </button>
+            <h4 class="modal-title" id="myModalLabel">
+               标题
+            </h4>
+         </div>
+         <div class="modal-body">
+            <div class="col-xs-3">
+                <input name="program" class="testasset" id="c1" type="checkbox" value="">
+                <label for="c1">参数一</label>
+            </div>
+             <div class="col-xs-3">
+                <input name="program" class="testasset" id="c2" type="checkbox" value="">
+                <label for="c2">参数二</label>
+            </div>
+             <div class="col-xs-3">
+                <input name="program" class="testasset" id="c3" type="checkbox" value="">
+                <label for="c3">参数三</label>
+            </div>
+             <div class="col-xs-3">
+                <input name="program" class="testasset" id="c4" type="checkbox" value="">
+                <label for="c4">参数四</label>
+            </div>
+
+
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-default"
+               data-dismiss="modal">关闭
+            </button>
+            <button type="button" class="btn btn-primary">
+               提交更改
+            </button>
+         </div>
+      </div><!-- /.modal-content -->
+</div><!-- /.modal -->
+
+
+{% endblock %}
+
+{% block self_head_css_js %}
+    {% load staticfiles %}
+    <script src="{% static 'js/jquery.shiftcheckbox.js' %}"></script>
+{% endblock %}
+{% block self_footer_js %}
+<script>
+    $(document).ready(function(){
+
+        var gg=$("input[value='mysql']");
+        $(gg).click(function(){
+             if($(gg).is(':checked')){
+            $('#myModal').modal('show')
+        }
+        })
+
+
+
+        $('.del').click(function(){
+            var row = $(this).closest('tr');
+            if (confirm("确定删除")) {
+            $.get(
+                    $(this).attr('value'),
+                    {},
+                    function(data){
+                        row.remove();
+                        alert(data);
+                    }
+
+            )}
+        });
+
+        $('#del_btn').click(function(){
+            var check_array = [];
+            if (confirm("确定删除")) {
+                $(".gradeX input:checked").each(function() {
+                    check_array.push($(this).attr("value"))
+                });
+                $.get("{% url 'user_group_del' %}",
+                    {id: check_array.join(",")},
+                    function(result){
+                        alert(result);
+                        $(".gradeX input:checked").closest("tr").remove();
+
+                    }
+                )
+            }
+
+        });
+        $("tbody tr").shiftcheckbox({
+            checkboxSelector: 'input:checkbox',
+            selectAll: $('#select_all'),
+            ignoreClick: 'a'
+        });
+        $('.shiftCheckbox').shiftcheckbox();
+    });
+</script>
+{% endblock %}

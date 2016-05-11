@@ -1,0 +1,479 @@
+# -*- coding: utf-8 -*-
+
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from django.core import serializers
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import *
+from jasset.models import *
+import json
+import time
+from jrelease.models import *
+from django.contrib.sessions.models import Session
+from jauto.install_api import *
+from jperm.ansible_api import *
+from jasset.relation_api import *
+from jrelease.upload_api import *
+from jrelease.project_api import *
+
+# Create your views here.
+
+@require_role('admin')
+def project_list(request):
+    """
+    项目列表展示
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目列表'
+    project_list = Project.objects.all()
+    # project_all = Project.objects.all()
+
+    usergroup_all = UserGroup.objects.all()
+    usergroup_name = request.GET.get('usergroup_name', '')
+    proj_name = request.GET.get('proj_name', '')
+    project_all = Project.objects.all().filter(usergroup_id=usergroup_name)
+    asset_user_group = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_name)
+    a_u_group = []
+    a_group = []
+    h_group=[]
+    for a_u_group_tmp in asset_user_group:
+        a_u_group.append(a_u_group_tmp.assetgroup_id)
+        asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+        for a_group_tmp in asset_group:
+            a_group.append(a_group_tmp.asset_id)
+            host_group = Asset.objects.all().filter(id__in=a_group)
+            for h_group_tmp in host_group:
+                 h_group.append(h_group_tmp.host_id)
+
+    if usergroup_name:
+        project_list = project_list.filter(usergroup_id=usergroup_name)
+        if proj_name:
+            project_list = Project.objects.all().filter(usergroup_id=usergroup_name).filter(proj_name=proj_name)
+
+    return my_render('jrelease/project_list.html', locals(), request)
+
+
+@require_role(role='super')
+def project_add(request):
+    """
+    新增项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        usergroup_id = request.POST.get('usergroup','')
+        proj_name = request.POST.get('proj_name','')
+        release_host_id = request.POST.get('hostname', '')
+        cluster_id = request.POST.get('clustername', '')
+        check_port = request.POST.get('check_port', '')
+        check_url = request.POST.get('check_url', '')
+
+        host_info = Asset.objects.all().get(host_id=release_host_id)
+        cluster_info = Cluster.objects.all().get(id=cluster_id)
+
+        db_proj_add(
+            usergroup_id=usergroup_id,
+            proj_name=proj_name,
+            release_host_name=host_info.host_name_show,
+            release_host_ip=host_info.ip,
+            release_host_id=host_info.host_id,
+            cluster_id=cluster_id,
+            cluster_name=cluster_info.cluster_name,
+            if_del=0,
+            add_time=time.time(),
+            check_port=check_port,
+            check_url=check_url
+        )
+        return HttpResponseRedirect(reverse('project_list'))
+    return my_render('jrelease/project_add.html', locals(), request)
+
+
+@require_role(role='super')
+def project_edit(request):
+    """
+    编辑项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '编辑项目管理', '自动化发布', '编辑项目管理'
+    project_id = request.GET.get('id', '')
+    project = Project.objects.all().get(id=project_id)
+
+    asset_all = get_asset_by_usergroup(project.usergroup_id)
+    cluster_all = Cluster.objects.all().filter(usergroup_id=project.usergroup_id)
+
+    if request.method == 'POST':
+        release_host_id = request.POST.get('hostname', '')
+        cluster_id = request.POST.get('clustername', '')
+        check_port = request.POST.get('check_port', '')
+        check_url = request.POST.get('check_url', '')
+
+        host_info = Asset.objects.all().get(host_id=release_host_id)
+        cluster_info = Cluster.objects.all().get(id=cluster_id)
+
+        proj_edit = Project(
+            release_host_name=host_info.host_name_show,
+            release_host_ip=host_info.ip,
+            release_host_id=host_info.host_id,
+            cluster_id=cluster_id,
+            cluster_name=cluster_info.cluster_name,
+            if_del=project.if_del,
+            usergroup_id=project.usergroup_id,
+            proj_name=project.proj_name,
+            check_port=check_port,
+            check_url=check_url
+        )
+        proj_edit.save()
+        return HttpResponseRedirect(reverse('project_list'))
+    return my_render('jrelease/project_edit.html', locals(), request)
+
+
+@require_role(role='super')
+def project_detail(request):
+    """
+    项目详情
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目管理'
+    project_id = request.GET.get('id', '')
+
+    project_all = get_object(Project, id=project_id)
+
+    project_list = Project.objects.all().filter(id=project_id)
+    a_group = []
+    a_group = []
+    b_group = []
+    c_group = []
+    d_group = []
+    for a_group_tmp in project_list:
+        a_group.append(a_group_tmp.cluster_id)
+        cluster_list = Cluster.objects.all().filter(id__in=a_group)
+        for b_group_tmp in cluster_list:
+            b_group.append(b_group_tmp.hosts)
+
+            c_group = b_group_tmp.hosts.split('|')
+            asset_all = Asset.objects.all().filter(id__in=c_group)
+    return my_render('jrelease/project_detail.html', locals(), request)
+
+
+@require_role('admin')
+def cluster_list(request):
+    """
+    项目列表展示
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '集群管理', '自动化发布', '集群列表'
+    cluster_list = Cluster.objects.all()
+    # project_all = Project.objects.all()
+    usergroup_name = request.GET.get('usergroup_name', '')
+    usergroup_all = UserGroup.objects.all()
+    if usergroup_name:
+        cluster_list = Cluster.objects.all().filter(usergroup_id=usergroup_name)
+    return my_render('jrelease/cluster_list.html', locals(), request)
+
+
+@require_role(role='super')
+def cluster_add(request):
+    """
+    编辑项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '集群管理', '自动化发布', '集群管理'
+    usergroup_all = UserGroup.objects.all()
+
+    if request.method == 'POST':
+        usergroup_id = request.POST.get('usergroup','')
+        cluster_name = request.POST.get('cluster_name','')
+        assets_select = request.POST.getlist('asset', [])
+
+        hosts = ''
+        if len(assets_select) == 1:
+            hosts = assets_select[0]
+        else:
+            i = 1
+            for asset_id in assets_select:
+                asset_id = str(asset_id)
+                if i < len(assets_select):
+                    hosts += asset_id + '|'
+                else:
+                    hosts += asset_id
+                i += 1
+
+        db_cluster_add(
+            usergroup_id=usergroup_id,
+            cluster_name=cluster_name,
+            hosts=hosts,
+            if_del=0,
+            add_time=time.time()
+        )
+        return HttpResponseRedirect(reverse('release_cluster_list'))
+    return my_render('jrelease/cluster_add.html', locals(), request)
+
+
+@require_role(role='super')
+def cluster_edit(request):
+    """
+    编辑集群
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '编辑集群管理', '自动化发布', '编辑集群管理'
+    cluster_id = request.GET.get('id', '')
+    cluster_info = Cluster.objects.all().get(id=cluster_id)
+
+    asset_all = get_asset_by_usergroup(cluster_info.usergroup_id)
+    asset_in_tmp = cluster_info.hosts.split('|')
+    asset_in = []
+    for asset_tmp in asset_in_tmp:
+        asset_in.append(int(asset_tmp))
+
+    if request.method == 'POST':
+        cluster_name = request.POST.get('cluster_name','')
+        assets_select = request.POST.getlist('asset', [])
+
+        hosts = ''
+        if len(assets_select) == 1:
+            hosts = assets_select[0]
+        else:
+            i = 1
+            for asset_id in assets_select:
+                asset_id = str(asset_id)
+                if i < len(assets_select):
+                    hosts += asset_id + '|'
+                else:
+                    hosts += asset_id
+                i += 1
+
+        db_cluster_edit(
+            id=cluster_id,
+            usergroup_id=cluster_info.usergroup_id,
+            hosts=hosts,
+            cluster_name=cluster_name,
+            if_del=cluster_info.if_del,
+            add_time=cluster_info.add_time
+        )
+        return HttpResponseRedirect(reverse('release_cluster_list'))
+    return my_render('jrelease/cluster_edit.html', locals(), request)
+
+
+@require_role(role='super')
+def cluster_detail(request):
+    """
+    编辑项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '集群管理', '自动化发布', '集群管理'
+    cluster_id = request.GET.get('id', '')
+    cluster_info = Cluster.objects.all().get(id=cluster_id)
+
+    asset_all = get_asset_by_usergroup(cluster_info.usergroup_id)
+    asset_in_tmp = cluster_info.hosts.split('|')
+    asset_in = []
+    for asset_tmp in asset_in_tmp:
+        asset_in.append(int(asset_tmp))
+    return my_render('jrelease/cluster_detail.html', locals(), request)
+
+
+def code_upload(request):
+    """
+    上传代码，修改文件名称并保存版本记录
+    """
+    usergroup_all = UserGroup.objects.all()
+
+    user = request.user
+    asset_select = []
+    if request.method == 'POST':
+        usergroup_id = request.POST.get('usergroup_id','')
+        proj_id = request.POST.get('proj_id','')
+        version = request.POST.get('version','')
+        upload_files = request.FILES.getlist('file[]', None)
+
+        upload_name = ''
+        proj_info = Project.objects.all().get(id=proj_id)
+        # asset_ids = proj_info['host'].split('|')
+
+        upload_dir = get_code_upload_dir()
+        ftp_dir = get_code_ftp_dir()
+
+        # for asset_id in asset_ids:
+        asset_select.append(Asset.objects.get(host_id=proj_info.release_host_id))
+
+        strtime = time.time()
+        strtime = str(strtime)
+        strtime_list = strtime.split('.')
+        for upload_file in upload_files:
+            upload_name = upload_file.name + '.' + strtime_list[0]
+            # file_path = '%s/%s' % (upload_dir, upload_file.name)
+            file_path = '%s/%s' % (upload_dir, upload_name)
+            with open(file_path, 'w') as f:
+                for chunk in upload_file.chunks():
+                    f.write(chunk)
+
+        db_add_upload_code(
+            usergroup_id=usergroup_id,
+            proj_id=proj_id,
+            proj_name=proj_info.proj_name,
+            version=version,
+            code_name=upload_name,
+            release_status=0,
+            release_time=strtime
+        )
+
+        calc_assets = list(set(asset_select))
+        push_resource = gen_resource(calc_assets)
+        runner = MyTask(push_resource)
+        ret = {}
+        ret = runner.run('copy', module_args='src=%s dest=%s directory_mode'
+                                        % (upload_dir, ftp_dir), pattern='*')
+
+        ret = runner.results
+        logger.debug(ret)
+        if ret.get('failed'):
+            error = u'上传目录: %s <br> 上传失败: [ %s ] <br>上传成功 [ %s ]' % (upload_dir,
+                                                                             ', '.join(ret.get('failed').keys()),
+                                                                             ', '.join(ret.get('ok').keys()))
+            return HttpResponse(error, status=500)
+        msg = u'上传目录: %s <br> 传送成功 [ %s ]' % (upload_dir, ', '.join(ret.get('ok').keys()))
+        return HttpResponse(msg)
+    return my_render('jrelease/code_upload.html', locals(), request)
+
+
+@require_role('admin')
+def code_release(request):
+    """
+    项目列表展示
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '代码发布', '自动化发布', '代码发布'
+    project_list = Project.objects.all()
+    usergroup_all = UserGroup.objects.all()
+
+    if request.method == 'POST':
+        usergroup_id = request.POST.get('usergroup_id', '')
+        proj_id = request.POST.get('proj_id', '')
+        version = request.POST.get('version', '')
+        asset = request.POST.getlist('asset', '')
+
+        strtime = time.time()
+        db_add_release(asset, proj_id, version, strtime)
+        code_info = Upload_Code.objects.all().get(id=version)
+        proj_info = Project.objects.all().get(id=proj_id)
+        if code_info.release_status == 0:
+            if len(asset) == 1:
+                first_release(asset[0], version, code_info.proj_name, code_info.code_name, proj_info.release_host_ip, proj_info.check_url, proj_info.check_port, strtime)
+            else:
+                first_res = first_release(asset[0], version, code_info.proj_name, code_info.code_name, proj_info.release_host_ip, proj_info.check_url, proj_info.check_port, strtime)
+                first_res = int(first_res)
+                if first_res == 1:
+                    common_release(list(set(asset) ^ set([asset[0]])), version, code_info.proj_name, code_info.code_name, proj_info.release_host_ip, proj_info.check_url, proj_info.check_port, strtime)
+                else:
+                    Detail.objects.filter(release_time=strtime).update(release_status=2)
+                    return HttpResponse('首台发布失败，发布中断')
+        elif code_info.release_status == 1:
+            common_release(asset, version, code_info.proj_name, code_info.code_name, proj_info.release_host_ip, proj_info.check_url, proj_info.check_port, strtime)
+        elif code_info.release_status == 2:
+            Detail.objects.filter(release_time=strtime).update(release_status=2)
+            return HttpResponse('该版本发布失败，请选择其他版本')
+
+        return HttpResponseRedirect(reverse('release_release_detail'))
+
+    return my_render('jrelease/code_release.html', locals(), request)
+
+
+@require_role('admin')
+def get_host_cluster_list(request):
+    """
+    ajax根据客户ID获取主机列表和集群列表
+    """
+    usergroup_id = request.POST.get('usergroup_id', '')
+
+    data = {}
+    host = get_asset_by_usergroup(usergroup_id)
+    cluster = Cluster.objects.all().filter(usergroup_id=usergroup_id).filter(if_del=0)
+
+    host = serializers.serialize('json', host)
+    cluster = serializers.serialize('json', cluster)
+    data = {"host": host, "cluster": cluster}
+    data = json.dumps(data)
+
+    return HttpResponse(data)
+
+
+@require_role('admin')
+def get_proj_list(request):
+    """
+    ajax根据客户ID获取项目列表
+    """
+    usergroup_id = request.POST.get('usergroup_id', '')
+    proj = Project.objects.all().filter(usergroup_id=usergroup_id).filter(if_del=0)
+    data = serializers.serialize('json', proj)
+    return HttpResponse(data)
+
+
+@require_role('admin')
+def get_asset_list(request):
+    """
+    ajax根据客户ID获取主机列表
+    """
+    usergroup_id = request.POST.get('usergroup_id', '')
+
+    asset_user_group = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_id)
+    a_u_group = []
+    a_group = []
+    for a_u_group_tmp in asset_user_group:
+        a_u_group.append(a_u_group_tmp.assetgroup_id)
+        asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+        for a_group_tmp in asset_group:
+            a_group.append(a_group_tmp.asset_id)
+            data = Asset.objects.all().filter(id__in=a_group).filter(if_del=0)
+        data = serializers.serialize('json',data)
+
+    return HttpResponse(data)
+
+
+@require_role('admin')
+def get_version_asset_list_by_proj(request):
+    """
+    ajax根据项目ID获取版本和主机列表
+    """
+    data = {}
+    proj_id = request.POST.get('proj_id', '')
+
+    proj_info = Project.objects.all().get(id=proj_id)
+    cluster_info = Cluster.objects.all().filter(id=proj_info.cluster_id)
+    if cluster_info:
+        asset_id = cluster_info[0].hosts.split('|')
+
+        version = Upload_Code.objects.all().filter(proj_id=proj_id)
+        host = Asset.objects.all().filter(id__in=asset_id).filter(if_del=0)
+
+        host = serializers.serialize('json', host)
+        version = serializers.serialize('json', version)
+        data = {"host": host, "version": version}
+        data = json.dumps(data)
+    else:
+        data = {"host": [], "version": []}
+        data = json.dumps(data)
+
+    return HttpResponse(data)
+
+
+@require_role('admin')
+def release_detail(request):
+    """
+    项目列表展示
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '发布详情', '自动化发布', '发布详情列表'
+    detail_all=Detail.objects.all()
+    return my_render('jrelease/release_detail.html', locals(), request)

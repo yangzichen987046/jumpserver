@@ -1,0 +1,183 @@
+# -*- coding: utf-8 -*-
+
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from django.core import serializers
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import *
+from jasset.models import *
+import json
+import time
+from jrelease.models import *
+from django.contrib.sessions.models import Session
+from jauto.install_api import *
+from jperm.ansible_api import *
+from jasset.relation_api import *
+from jrelease.upload_api import *
+
+# Create your views here.
+
+@require_role('admin')
+def index(request):
+    return HttpResponse(11)
+
+@require_role('admin')
+def project_list(request):
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目管理查询'
+    project_list = Project.objects.all()
+
+    usergroup_all = UserGroup.objects.all()
+    usergroup_name = request.GET.get('usergroup_name', '')
+    proj_name = request.GET.get('proj_name', '')
+    project_all = Project.objects.all().filter(usergroup_id=usergroup_name)
+    asset_user_group = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_name)
+    a_u_group = []
+    a_group = []
+    h_group=[]
+    for a_u_group_tmp in asset_user_group:
+        a_u_group.append(a_u_group_tmp.assetgroup_id)
+        asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+        for a_group_tmp in asset_group:
+            a_group.append(a_group_tmp.asset_id)
+            host_group = Asset.objects.all().filter(id__in=a_group)
+            for h_group_tmp in host_group:
+                 h_group.append(h_group_tmp.host_id)
+
+    if usergroup_name:
+        project_list = project_list.filter(usergroup_id=usergroup_name)
+        if proj_name:
+            project_list = Project.objects.all().filter(usergroup_id=usergroup_name).filter(proj_name=proj_name)
+
+    return my_render('jrelease/project_list.html', locals(), request)
+
+
+@require_role(role='super')
+def project_edit(request):
+    """
+    编辑项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '编辑项目管理', '自动化发布', '编辑项目管理'
+    project_id = request.GET.get('id', '')
+    project = Project.objects.all().get(id=project_id)
+
+    asset_all = get_asset_by_usergroup(project.usergroup_id)
+    cluster_all = Cluster.objects.all()
+    # if request.method == 'POST':
+    #     # asset_name = request.POST.get('assetname', '')
+    #     asset_group = request.POST.get('assetgroup', '')
+    #     group = Project(
+    #             # assetgroup_id=asset_name,
+    #             proj_name=asset_group)
+    #     group.save()
+    # # project_list = Project.objects.all()
+
+    return my_render('jrelease/project_edit.html', locals(), request)
+
+
+@require_role(role='super')
+def project_detail(request):
+    """
+    提交安装应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目管理'
+    project_id = request.GET.get('id', '')
+
+    project_all = get_object(Project, id=project_id)
+
+    project_list = Project.objects.all().filter(id=project_id)
+    a_group = []
+    a_group = []
+    b_group = []
+    c_group = []
+    d_group = []
+    for a_group_tmp in project_list:
+        a_group.append(a_group_tmp.cluster_id)
+        cluster_list =Cluster.objects.all().filter(id__in=a_group)
+        for b_group_tmp in cluster_list:
+            b_group.append(b_group_tmp.hosts)
+
+            c_group = b_group_tmp.hosts.split('|')
+            asset_all =Asset.objects.all().filter(id__in=c_group)
+    return my_render('jrelease/project_detail.html', locals(), request)
+
+
+@require_role(role='super')
+def project_add(request):
+    """
+    新增应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        group_name = request.POST.get('group_name', '')
+        users_selected = request.POST.getlist('users_selected', '')
+    return my_render('jrelease/project_add.html', locals(), request)
+
+
+@require_role('admin')
+def get_project_list(request):
+    usergroup_id = request.POST.get('usergroup_id', '')
+
+    data = Project.objects.all().filter(usergroup_id=usergroup_id)
+    data = serializers.serialize('json',data)
+
+    return HttpResponse(data)
+    return my_render('jrelease/project_detail.html', locals(), request)
+
+
+def code_upload(request):
+    """
+    上传代码，修改文件名称并保存版本记录
+    """
+    usergroup_all = UserGroup.objects.all()
+
+    user = request.user
+    asset_select = []
+    if request.method == 'POST':
+        # asset_ids = request.POST.getlist('asset_ids', '')
+        # asset_ids = [191]
+        upload_files = request.FILES.getlist('file[]', None)
+        upload_dir = get_code_upload_dir()
+        ftp_dir = get_code_ftp_dir()
+
+        for asset_id in asset_ids:
+            asset_select.append(Asset.objects.get(id=asset_id))
+
+        for upload_file in upload_files:
+            file_path = '%s/%s' % (upload_dir, upload_file.name)
+            with open(file_path, 'w') as f:
+                for chunk in upload_file.chunks():
+                    f.write(chunk)
+
+        calc_assets = list(set(asset_select))
+        push_resource = gen_resource(calc_assets)
+        runner = MyTask(push_resource)
+        ret = {}
+        ret = runner.run('copy', module_args='src=%s dest=%s directory_mode'
+                                        % (upload_dir, ftp_dir), pattern='*')
+
+        ret = runner.results
+        logger.debug(ret)
+        if ret.get('failed'):
+            error = u'上传目录: %s <br> 上传失败: [ %s ] <br>上传成功 [ %s ]' % (upload_dir,
+                                                                             ', '.join(ret.get('failed').keys()),
+                                                                             ', '.join(ret.get('ok').keys()))
+            return HttpResponse(error, status=500)
+        msg = u'上传目录: %s <br> 传送成功 [ %s ]' % (upload_dir, ', '.join(ret.get('ok').keys()))
+        return HttpResponse(msg)
+    return my_render('jrelease/code_upload.html', locals(), request)

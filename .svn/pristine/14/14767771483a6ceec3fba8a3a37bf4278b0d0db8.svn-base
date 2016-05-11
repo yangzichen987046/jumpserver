@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins" id="all">
+                <div class="ibox-title">
+                    <h5> 安装进度查询</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                            <i class="fa fa-wrench"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="ibox-content">
+                    <form id="asset_form">
+
+
+                        <div class="col-sm-9" style="padding-left: 0px;padding-right: 0px;">
+{#                            <label>#}
+{#                                <select name="idc" class="form-control m-b input-sm" onchange="change_info()">#}
+{#                                    <option value="">机房</option>#}
+{#                                    {% for idc in idc_all %}#}
+{#                                        {% ifequal idc.name idc_name %}#}
+{#                                            <option value="{{idc.name}}" selected> {{ idc.name|slice:":20" }}</option>#}
+{#                                        {% else %}#}
+{#                                            <option value="{{idc.name}}"> {{ idc.name|slice:":20" }}</option>#}
+{#                                        {% endifequal %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+{#                            </label>#}
+                            <label>
+                                <select name="usergroupid" id="usergroupid" class="form-control m-b input-sm get-auto" style="padding:0px 12px;" >
+                                    <option value="">客户</option>
+                                     {% for usergroup in usergroup_all %}
+
+
+                                            <option value="{{ usergroup.id}}" >{{ usergroup.name}}</option>
+
+
+                                    {% endfor %}
+                                </select>
+                            </label>
+
+                            <label>
+                                <select id="asset_name" name="asset_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;" >
+                                    <option value="">主机</option>
+
+                                </select>
+                            </label>
+                            <label>
+                                <select name="app_name" id="app_name" class="form-control m-b input-sm get-auto" style="padding:0px 12px;">
+                                    <option value="">应用</option>
+                                    {% for app in app_all %}
+                                        {% ifequal app.app_name app_name %}
+                                           <option value="{{ app.app_name}}" selected>{{ app.app_name}}</option>
+                                         {% else %}
+                                           <option value="{{ app.app_name}}">{{ app.app_name}}</option>
+                                         {% endifequal %}
+
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                               <input name="start" id="start" type="text" value="" placeholder="开始时间"  onclick="SelectDate(this,'yyyy-MM-dd hh:mm:ss')"class="form-control m-b input-sm get-auto" style="width:173px;"/>
+                            </label>
+                            <label>
+                               <input name="over" id="over" type="text" value="" placeholder="结束时间"  onclick="SelectDate(this,'yyyy-MM-dd hh:mm:ss')"class="form-control m-b input-sm get-auto" style="width:173px;"/>
+                            </label>
+                            <button id='sub' href="" type="button" class="btn btn-sm btn-primary search-btn" style="margin-bottom: 0px;">
+                                        查询
+                            </button>
+{#                            <label>#}
+{#                                <select name="asset_type" class="form-control m-b input-sm" onchange="change_info()">#}
+{#                                    <option value="">资产类型</option>#}
+{#                                    {% for type in asset_types %}#}
+{#                                        {% ifequal type.0|int2str asset_type %}#}
+{#                                            <option value="{{ type.0 }}" selected> {{ type.1 }}</option>#}
+{#                                        {% else %}#}
+{#                                            <option value="{{ type.0 }}"> {{ type.1 }}</option>#}
+{#                                        {% endifequal %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+{#                            </label>#}
+
+{#                            <label>#}
+{#                                <select name="status" class="form-control m-b input-sm" onchange="change_info()">#}
+{#                                    <option value="">资产状态</option>#}
+{#                                    {% for s in asset_status %}#}
+{#                                        {% ifequal s.0|int2str status %}#}
+{#                                            <option value="{{ s.0 }}" selected> {{ s.1 }}</option>#}
+{#                                        {% else %}#}
+{#                                            <option value="{{ s.0 }}"> {{ s.1 }}</option>#}
+{#                                        {% endifequal %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+{#                            </label>#}
+                        </div>
+{#                        <div class="col-sm-4" >#}
+{#                            <input class="btn btn-sm btn-primary "value="查询" type="submit"/>#}
+{#                        </div>#}
+                        <div class="col-sm-3" style="padding-right: 0">
+                             <div class="input-group inline-group">
+                                <input type="text" class="form-control m-b input-sm" id="search_input" name="keyword" value="{{ keyword }}" placeholder="Search">
+                                <input type="text" style="display: none">
+                                <div class="input-group-btn">
+                                    <button id='search_btn' href="{% url 'asset_list' %}?search=true" type="button" class="btn btn-sm btn-primary search-btn"  onclick="change_info()">
+                                        - 搜索 -
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="export"></div>
+                        <table class="table table-striped table-bordered table-hover " id="editable" name="editable">
+                            <thead>
+                                <tr>
+                                    <th class="text-center"> ID </th>
+                                    <th class="text-center"> 主机名称 </th>
+                                    <th class="text-center"> IP地址 </th>
+                                    <th class="text-center">应用名称 </th>
+                                    <th class="text-center"> 请求时间</th>
+                                    <th class="text-center"> 安装状态 </th>
+{#                                    <th class="text-center"> 操作 </th>#}
+
+                                </tr>
+                            </thead>
+                            <tbody class="xx">
+                                {% for app in app_list %}
+                                     <tr class="gradeX">
+                                        <td class="text-center">{{ app.id }}</td>
+                                        <td class="text-center">{{ app.host_id | get_host_name}}</td>
+                                        <td class="text-center">{{ app.ip }}</td>
+                                        <td class="text-center">{{ app.app_name }}</td>
+                                        <td class="text-center">{{ app.apply_time | ti_to_date}}</td>
+                                        <td class="text-center">{{ app.status | get_app_status }}</td>
+{#                                        <td class="text-center"></td>#}
+                                     </tr>
+                                {% endfor %}
+
+
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-6">
+
+                            </div>
+                            {% include 'paginator.html' %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block self_footer_js %}
+<script>
+(function($) {
+    $.extend({
+        myTime: {
+            /**
+             * 当前时间戳
+             * @return <int>        unix时间戳(秒)
+             */
+            CurTime: function(){
+                return Date.parse(new Date())/1000;
+            },
+            /**
+             * 日期 转换为 Unix时间戳
+             * @param <string> 2014-01-01 20:20:20  日期格式
+             * @return <int>        unix时间戳(秒)
+             */
+            DateToUnix: function(string) {
+                var f = string.split(' ', 2);
+                var d = (f[0] ? f[0] : '').split('-', 3);
+                var t = (f[1] ? f[1] : '').split(':', 3);
+                return (new Date(
+                        parseInt(d[0], 10) || null,
+                        (parseInt(d[1], 10) || 1) - 1,
+                        parseInt(d[2], 10) || null,
+                        parseInt(t[0], 10) || null,
+                        parseInt(t[1], 10) || null,
+                        parseInt(t[2], 10) || null
+                        )).getTime() / 1000;
+            },
+            /**
+             * 时间戳转换日期
+             * @param <int> unixTime    待时间戳(秒)
+             * @param <bool> isFull    返回完整时间(Y-m-d 或者 Y-m-d H:i:s)
+             * @param <int>  timeZone   时区
+             */
+            UnixToDate: function(unixTime, isFull, timeZone) {
+                if (typeof (timeZone) == 'number')
+                {
+                    unixTime = parseInt(unixTime) + parseInt(timeZone) * 60 * 60;
+                }
+                var time = new Date(unixTime * 1000);
+                var ymdhis = "";
+                ymdhis += time.getUTCFullYear() + "-";
+                ymdhis += (time.getUTCMonth()+1) + "-";
+                ymdhis += time.getUTCDate();
+                if (isFull === true)
+                {
+                    ymdhis += " " + time.getUTCHours() + ":";
+                    ymdhis += time.getUTCMinutes() + ":";
+                    ymdhis += time.getUTCSeconds();
+                }
+                return ymdhis;
+            }
+        }
+    });
+})(jQuery);
+
+
+function change_info(){
+        var args = $("#asset_form").serialize();
+        window.location = "{% url 'program_status' %}?" + args;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(function($){
+
+
+    $.getUrlParam = function(name)
+        {
+        var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r!=null) return unescape(r[2]); return null;
+        }
+    })(jQuery);
+    $(document).ready(function() {
+
+
+
+
+        var usergroup_id=$.getUrlParam('usergroupid')
+
+
+        $("#usergroupid").find("option").each(function(){
+
+            $("option[value='"+usergroup_id+"']").attr("selected",true);
+
+        })
+
+
+
+        if(usergroup_id !==null && usergroup_id !==""){
+
+
+        url = '{% url 'auto_get_asset_list' %}'
+        data = {usergroup_id:usergroup_id}
+        $.ajax({
+            type:'post',
+            url:url,
+            data:data,
+            success:function(data){
+                var arr = new Array();
+                data = JSON.parse(data);
+                arr = data;
+                $("#asset_name").empty();
+                $("#asset_name").append('<option value="">主机</option>')
+                for(var i=0;i<arr.length;i++) {
+                $("#asset_name").append(' <option name="' + arr[i].fields.host_id + '" value="' + arr[i].fields.host_id + '">' + arr[i].fields.host_name_show + '</option>');
+
+            }
+                 var asset_name = $.getUrlParam('asset_name')
+                    if(asset_name !==null && asset_name !=="") {
+                        $("#asset_name").find("option").each(function () {
+
+                            $("option[value='" + asset_name + "']").attr("selected", true);
+                        })
+                    }
+            },
+            error:function(){
+                alert(2)
+            }
+        });
+
+
+        }
+
+    $("#usergroupid").change(function(){
+        var usergroup_id = $("#usergroupid").val()
+
+        url = '{% url 'auto_get_asset_list' %}'
+        data = {usergroup_id:usergroup_id}
+        $.ajax({
+            type:'post',
+            url:url,
+            data:data,
+            success:function(data){
+                var arr = new Array();
+                data = JSON.parse(data);
+                arr = data;
+                $("#asset_name").empty();
+                $("#asset_name").append('<option value="">主机</option>')
+                for(var i=0;i<arr.length;i++) {
+                $("#asset_name").append(' <option name="' + arr[i].fields.host_id + '" value="' + arr[i].fields.host_id + '">' + arr[i].fields.host_name_show + '</option>');
+
+            }
+            },
+            error:function(){
+                alert(2)
+            }
+        });
+    });
+
+    $("#sub").click(function(){
+        var usergroup_id = $("#usergroupid").val();
+        var asset_name = $("#asset_name").val()
+        var app_name = $("#app_name").val()
+
+        var start=$.myTime.DateToUnix($("#start").val())
+        var over=$.myTime.DateToUnix($("#over").val())
+{#        alert(usergroup_id)#}
+{#        alert(asset_name)#}
+{#        alert(app_name)#}
+             var args = $("#asset_form").serialize();
+        window.location = "{% url 'program_status' %}?" + args;
+
+
+
+
+    });
+
+
+ });
+
+</script>
+{% endblock %}

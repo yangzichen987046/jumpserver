@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+<script type="text/javascript">
+    function search_ip(text, noselect, total){
+        $("#" + noselect).children().each(
+            function(){
+                $(this).remove();
+            });
+
+        $("#" + total).children().each(function(){
+            if($(this).text().search(text) != -1){
+                $("#" + noselect).append($(this).clone())
+            }
+            })
+    }
+</script>
+
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="row">
+        <div class="col-sm-10">
+            <div class="ibox float-e-margins">
+                <div id="ibox-content" class="ibox-title">
+                    <h5> 填写主机组用户组关联基本信息 </h5>
+                    <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-user">
+                            </ul>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+                <div class="ibox-content">
+                    {% if emg %}
+                        <div class="alert alert-warning text-center">{{ emg }}</div>
+                    {% endif %}
+                    {% if smg %}
+                        <div class="alert alert-success text-center">{{ smg }}</div>
+                    {% endif %}
+                    <form id="assetForm" method="post" class="form-horizontal">
+                        <div class="form-group"><label class="col-sm-2 control-label"> 用户组<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8" name="group_id" value="">
+
+                             <input type="text" value="{{ UserGroup_name.name }}" placeholder="Name" name="name" class="form-control">
+
+
+                            </div>
+                        </div>
+
+                       <div class="hr-line-dashed"></div>
+
+                     <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">主机组<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                {% for asset in agroup_all %}
+                                    <div class="col-xs-6">
+                                       <input {% if asset.id in agroup %} checked {% endif %} name="asset" class="testasset" id="{{ asset.id }}"  type="checkbox" value="{{ asset.id }}">
+
+
+                                       <label for="{{ asset.id}}"> {{ asset.name }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <div class="col-sm-4 col-sm-offset-5">
+                                <a class="btn btn-white"  href="{% url 'asset_group_relation' %}">取消</a>
+                                <button class="btn btn-primary" id="submit_button" type="submit" onclick="on_submit('groups_selected')  "> 提交 </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $("#submit_button").click(function(){
+            $('#assetForm option').each(function(){
+                $(this).prop('selected', true)
+            })
+        });
+
+    })
+
+    $('#assetForm').validator({
+    timely: 2,
+    theme: "yellow_right_effect",
+    fields: {
+        "j_group": {
+            rule: "required",
+            tip: "输入业务组名",
+            ok: "",
+            msg: {required: "业务组名必须填写!"},
+            data: {'data-ok':"业务组名可以使用"}
+        }
+    },
+    valid: function(form) {
+        form.submit();
+    }
+});
+
+    function on_submit(id){
+        $('#'+id+' option').each(
+            function(){
+                $(this).prop('selected', true)
+            })
+        }
+</script>
+
+{% endblock %}

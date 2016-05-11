@@ -1,0 +1,30 @@
+# coding: utf-8
+from __future__ import division
+from jrelease.models import *
+
+
+def db_proj_add(**kwargs):
+    """
+    add project to db
+    添加项目时数据库操作函数
+    """
+    project = Project(**kwargs)
+    project.save()
+
+
+def db_cluster_add(**kwargs):
+    """
+    add Cluster to db
+    添加集群时数据库操作函数
+    """
+    cluster = Cluster(**kwargs)
+    cluster.save()
+
+
+def db_cluster_edit(**kwargs):
+    """
+    updata Cluster to db
+
+    """
+    cluster_id = kwargs.pop('id')
+    Cluster.objects.filter(id=cluster_id).update(**kwargs)

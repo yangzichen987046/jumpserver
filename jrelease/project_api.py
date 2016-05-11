@@ -1,0 +1,118 @@
+# coding: utf-8
+from __future__ import division
+from jrelease.models import *
+from jperm.ansible_api import *
+from jperm.perm_api import *
+
+
+def db_proj_add(**kwargs):
+    """
+    add project to db
+    添加项目时数据库操作函数
+    """
+    project = Project(**kwargs)
+    project.save()
+
+
+def db_cluster_add(**kwargs):
+    """
+    add Cluster to db
+    添加集群时数据库操作函数
+    """
+    cluster = Cluster(**kwargs)
+    cluster.save()
+
+
+def db_cluster_edit(**kwargs):
+    """
+    update Cluster to db
+    """
+    cluster_id = kwargs.pop('id')
+    Cluster.objects.filter(id=cluster_id).update(**kwargs)
+
+
+def first_release(host_id, version_id, proj_name, code_name, down_ip, check_url, check_port, strtime):
+    """
+    首次发布代码，需要传数个参数，以回写
+    """
+    # /data/scripts/deploy.sh auth auth.zip 8081
+    # shell = "/tmp/shell/install/%s %s %s" % (program_script, ip, token)
+    # shell = "ssh root@{0} /tmp/shell/install/{1} {2} {3} {4}".format(ip, program_script, ip, token)
+
+    # asset_detail = Asset.objects.all().get(id=host_id)
+    # calc_assets = list(set([asset_detail]))
+    # push_resource = gen_resource(calc_assets)
+    # task = MyTask(push_resource)
+    # ret = task.program_install(shell)
+    host_info = Asset.objects.all().get(host_id=host_id)
+    shell = "ssh root@{0} /tmp/shell/deploy.sh {1} {2} {3} {4} {5}".format(host_info.ip, proj_name, code_name, check_port, check_url, down_ip)
+    ret = os.system(shell)
+    ret = int(ret)
+    ret >>= 8
+    release_detail = Detail.objects.all().filter(code_version_id=version_id).filter(host_id=host_info.host_id).get(release_time=strtime)
+    release_detail.release_status = ret
+    release_detail.save()
+    code_detail = Upload_Code.objects.all().get(id=version_id)
+    code_detail.release_status = ret
+    code_detail.save()
+    return ret
+
+
+def common_release(asset_list, version_id, proj_name, code_name, down_ip, check_url, check_port, strtime):
+    """
+    正常发布代码
+    """
+    shell = "/tmp/shell/deploy.sh %s %s %s %s %s" % (proj_name, code_name, check_port, check_url, down_ip)
+    asset_detail = Asset.objects.all().filter(host_id__in=asset_list)
+    calc_assets = list(set(asset_detail))
+    push_resource = gen_resource(calc_assets)
+    task = MyTask(push_resource)
+    ret = task.program_install(shell)
+
+    for host_id_tmp in asset_list:
+        release_detail = Detail.objects.all().filter(host_id=host_id_tmp).filter(code_version_id=version_id).get(release_time=strtime)
+        release_detail.release_status = 1
+        release_detail.save()
+
+    # for push_type, result in ret.items():
+    #     if result.get('failed'):
+    #         for hostname, info in result.get('failed').items():
+    #             release_detail = Detail.objects.all().filter(host_id=hostname).filter(code_version_id=version_id).get(release_time=strtime)
+    #             release_detail.release_status = 2
+    #             release_detail.save()
+    #
+    #     elif result.get('ok'):
+    #         for hostname, info in result.get('ok').items():
+    #             release_detail = Detail.objects.all().filter(host_id=hostname).filter(code_version_id=version_id).get(release_time=strtime)
+    #             release_detail.release_status = 1
+    #             release_detail.save()
+    return ret
+
+
+def db_add_release(asset_list, proj_id, version_id, strtime):
+    """
+    数据库写入数据
+    """
+    proj_info = Project.objects.all().get(id=proj_id)
+    version_info = Upload_Code.objects.all().get(id=version_id)
+    for asset_id in asset_list:
+        asset_info = Asset.objects.all().get(host_id=asset_id)
+        db_add_release_detail(
+            code_version_id=version_id,
+            host_id=asset_info.host_id,
+            host_ip=asset_info.ip,
+            host_name_show=asset_info.host_name_show,
+            check_port=proj_info.check_port,
+            check_url=proj_info.check_url,
+            release_status=0,
+            release_time=strtime
+        )
+
+
+
+def db_add_release_detail(**kwargs):
+    """
+    数据库写入数据
+    """
+    detail = Detail(**kwargs)
+    detail.save()

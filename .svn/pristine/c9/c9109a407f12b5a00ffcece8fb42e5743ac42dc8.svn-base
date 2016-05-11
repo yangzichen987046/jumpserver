@@ -1,0 +1,23 @@
+[base]
+url = http://10.10.10.88
+key = iuvrr66jyfbkc2bm
+log = debug
+
+[db]
+host = 10.10.10.77
+port = 3306
+user = zsc
+password = Live400.Com
+database = jumpserver
+
+[websocket]
+web_socket_host = 10.10.10.88:3000
+
+[mail]
+mail_enable = 1
+email_host = smtp.exmail.qq.com
+email_port = 25
+email_host_user = service@live400.com
+email_host_password = Live400.Com
+email_use_tls = False
+

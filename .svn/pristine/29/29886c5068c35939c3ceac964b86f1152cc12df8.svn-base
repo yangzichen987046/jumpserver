@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins" id="all">
+                <div class="ibox-title">
+                    <h5> 应用列表查询</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                            <i class="fa fa-wrench"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="ibox-content">
+                    <form id="asset_form">
+                        <div class="col-sm-8" style="padding-left: 0px">
+                            <a href="/jauto/program/list/add" class="btn btn-sm btn-primary "> 新增 </a>
+                        </div>
+{#                        <div class="col-sm-4" >#}
+{#                            <input class="btn btn-sm btn-primary "value="查询" type="submit"/>#}
+{#                        </div>#}
+                        <div class="col-sm-4" style="padding-right: 0">
+                             <div class="input-group inline-group">
+                                <input type="text" class="form-control m-b input-sm" id="search_input" name="keyword" value="{{ keyword }}" placeholder="Search">
+                                <input type="text" style="display: none">
+                                <div class="input-group-btn">
+                                    <button id='search_btn' href="{% url 'asset_list' %}?search=true" type="button" class="btn btn-sm btn-primary search-btn"  onclick="change_info()">
+                                        - 搜索 -
+                                    </button>
+                                    <button type="button" href="{% url 'asset_list' %}?export=true" name="export" class="btn btn-sm btn-success search-btn-excel" onclick="return false">
+                                        - 导出 -
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="export"></div>
+                        <table class="table table-striped table-bordered table-hover " id="editable" name="editable">
+                            <thead>
+                                <tr>
+                                    <th class="text-center"> 序号 </th>
+                                    <th class="text-center"> 应用名 </th>
+                                    <th class="text-center"> 脚本名 </th>
+                                    <th class="text-center"> 当前状态 </th>
+                                    <th class="text-center"> 操作 </th>
+                                </tr>
+                            </thead>
+                            <tbody class="xx">
+                                {% for app in app_all %}
+                                     <tr class="gradeX">
+                                        <td class="text-center">{{ app.id }}</td>
+                                        <td class="text-center">{{ app.app_name}}</td>
+                                        <td class="text-center">{{ app.script_name}}</td>
+                                        <td class="text-center">{{ app.if_del | if_del}}</td>
+                                        <td class="text-center"><a href="{% url 'program_list_edit' %}?id={{ app.id }}" class="btn btn-xs btn-info">编辑</a></td>
+                                     </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-6">
+                            </div>
+                            {% include 'paginator.html' %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block self_footer_js %}
+<script>
+    $(document).ready(function() {
+        $(".get-auto").change(function () {
+            var args = $("#asset_form").serialize();
+            window.location = "{% url 'program_status' %}?" + args
+        })
+    })
+</script>
+{% endblock %}

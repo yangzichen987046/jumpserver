@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+ <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-10">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>填写基本信息</h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="ibox-content">
+                        <form method="post" id="ruleForm" class="form-horizontal" action="">
+                            {% if error %}
+                                <div class="alert alert-warning text-center">{{ error }}</div>
+                            {% endif %}
+                            {% if msg %}
+                                <div class="alert alert-success text-center">{{ msg }}</div>
+                            {% endif %}
+                            <div class="form-group">
+                                <label for="user" class="col-sm-2 control-label">客户</label>
+                                <div class="col-sm-8">
+                                     <select name="user"id="user" data-placeholder="用户名" class=" form-control m-b"  >
+                                        {% for cluster in cluster_all %}
+                                            <option value="{{ cluster.usergroup_id }}" {% if cluster_list.usergroup_id == cluster.usergroup_id %} selected {% endif %}>{{ cluster.usergroup_id | get_usergroup_id}}</option>
+                                        {% endfor %}
+                                     </select>
+                                </div>
+                            </div>
+
+                             <div class="form-group">
+                                    <label for="assetgroup" class="col-sm-2 control-label">集群名称</label>
+                                    <div class="col-sm-8">
+                                        <input type="text" value="{{ cluster_list.cluster_name }}" name="{{ cluster_list.cluster_name }}" class="form-control">
+                                    </div>
+                             </div>
+{#                            <div class="form-group">#}
+{#                                <label for="asset_select" class="col-sm-2 control-label">主机列表</label>#}
+{#                                <div class="col-sm-8">#}
+{#                                    <div class="check" id="asset_select">#}
+{#                                    </div>#}
+{#                                </div>#}
+{#                            </div>#}
+{#                            <div class="form-group">#}
+{#                                <label for="asset" class="col-sm-2 control-label">主机列表</label>#}
+{#                                <div class="col-sm-8">#}
+{#                                    <div class="check" id="asset">#}
+{#                                       {% for asset in asset_all %}#}
+{#                                            <div class="col-xs-6">#}
+{#                                                <input name="asset" class="testasset" id="{{ asset.id}}" type="checkbox" value="{{ asset.host_name_show}}">#}
+{#                                                <label for="{{ asset.id}}">{{ asset.host_name_show}}</label>#}
+{#                                            </div>#}
+{#                                        {% endfor %}#}
+{#                                    </div>#}
+{#                                </div>#}
+{#                            </div>#}
+
+                        <div class="form-group">
+                                <label for="asset_select" class="col-sm-2 control-label">主机列表</label>
+                                <div class="col-sm-8">
+                                    <div class="check" id="asset_select">
+                                        {% for asset in asset_all %}
+                                            <div class="col-xs-6">
+                                                <input  {% if asset.id in f_group %} checked {% endif %} name="asset" class="testasset" id="{{ asset.id}}" type="checkbox" value="{{ asset.id}}">
+                                                <label for="{{ asset.id}}">{{ asset.host_name_show}}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hr-line-dashed"></div>
+                            <div class="form-group">
+                                <div class="col-sm-4 col-sm-offset-2">
+                                    <button class="btn btn-white" type="reset">取消</button>
+                                    <button id="submit_button" class="btn btn-primary" type="submit">确认保存</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block self_head_css_js %}
+    {% load staticfiles %}
+    <script src="{% static 'js/jquery.shiftcheckbox.js' %}"></script>
+{% endblock %}
+{% block self_footer_js %}
+{#<script>#}
+{#    $(document).ready(function(){#}
+{#        var usergroup_id = $("#user").val()#}
+{#            url = '{% url 'release_get_asset_list' %}'#}
+{#            data = {usergroup_id:usergroup_id}#}
+{#            $.ajax({#}
+{#                type:'post',#}
+{#                url:url,#}
+{#                data:data,#}
+{#                success:function(data){#}
+{#                    var arr = new Array();#}
+{#                    data = JSON.parse(data);#}
+{#                    arr = data;#}
+{#                    $("#asset_select").empty();#}
+{##}
+{#                    for(var i=0;i<arr.length;i++) {#}
+{#                        var str_add = '<div class="col-xs-6">'+#}
+{#                            '<input name="asset" class="testasset" id="' + arr[i].fields.host_id + '" type="checkbox" value="' + arr[i].pk + '">'+#}
+{#                            '<label for="' + arr[i].fields.host_id +'">' + arr[i].fields.host_name_show + '</label>' +#}
+{#                        '</div>'#}
+{#                        $("#asset_select").append(str_add);#}
+{#                    }#}
+{#                },#}
+{#                error:function(){#}
+{#                    alert(2)#}
+{#                }#}
+{#            });#}
+{##}
+{#        $("#user").change(function(){#}
+{#            var usergroup_id = $("#user").val()#}
+{#            url = '{% url 'release_get_asset_list' %}'#}
+{#            data = {usergroup_id:usergroup_id}#}
+{#            $.ajax({#}
+{#                type:'post',#}
+{#                url:url,#}
+{#                data:data,#}
+{#                success:function(data){#}
+{#                    var arr = new Array();#}
+{#                    data = JSON.parse(data);#}
+{#                    arr = data;#}
+{#                    $("#asset_select").empty();#}
+{##}
+{#                    for(var i=0;i<arr.length;i++) {#}
+{#                        var str_add = '<div class="col-xs-6">'+#}
+{#                            '<input name="asset" class="testasset" id="' + arr[i].fields.host_id + '" type="checkbox" value="' + arr[i].pk + '">'+#}
+{#                            '<label for="' + arr[i].fields.host_id +'">' + arr[i].fields.host_name_show + '</label>' +#}
+{#                        '</div>'#}
+{#                        $("#asset_select").append(str_add);#}
+{#                    }#}
+{#                },#}
+{#                error:function(){#}
+{#                    alert(2)#}
+{#                }#}
+{#            });#}
+{#        });#}
+{##}
+{##}
+{##}
+{##}
+{##}
+{##}
+{#        $('.del').click(function(){#}
+{#            var row = $(this).closest('tr');#}
+{#            if (confirm("确定删除")) {#}
+{#            $.get(#}
+{#                    $(this).attr('value'),#}
+{#                    {},#}
+{#                    function(data){#}
+{#                        row.remove();#}
+{#                        alert(data);#}
+{#                    }#}
+{##}
+{#            )}#}
+{#        });#}
+{##}
+{#        $('#del_btn').click(function(){#}
+{#            var check_array = [];#}
+{#            if (confirm("确定删除")) {#}
+{#                $(".gradeX input:checked").each(function() {#}
+{#                    check_array.push($(this).attr("value"))#}
+{#                });#}
+{#                $.get("{% url 'user_group_del' %}",#}
+{#                    {id: check_array.join(",")},#}
+{#                    function(result){#}
+{#                        alert(result);#}
+{#                        $(".gradeX input:checked").closest("tr").remove();#}
+{##}
+{#                    }#}
+{#                )#}
+{#            }#}
+{##}
+{#        });#}
+{#        $("tbody tr").shiftcheckbox({#}
+{#            checkboxSelector: 'input:checkbox',#}
+{#            selectAll: $('#select_all'),#}
+{#            ignoreClick: 'a'#}
+{#        });#}
+{#        $('.shiftCheckbox').shiftcheckbox();#}
+{#    });#}
+{#</script>#}
+{% endblock %}

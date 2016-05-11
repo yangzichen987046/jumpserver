@@ -1,0 +1,148 @@
+# -*- coding: utf-8 -*-
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import AccessKey, User_Group
+from jasset.models import Asset, IDC, AssetGroup, ASSET_TYPE, ASSET_STATUS, Assetgroup_Usergroup, Asset_Group
+import json
+import time
+from jauto.models import *
+from django.contrib.sessions.models import Session
+from jauto.install_api import *
+from jperm.ansible_api import *
+
+# Create your views here.
+
+
+@require_role(role='super')
+def program_add(request):
+    """
+    提交安装应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        asset_all = request.POST.getlist('asset', '')
+        program_all = request.POST.getlist('program', '')
+
+        assets_obj = [Asset.objects.get(host_id=asset_id) for asset_id in asset_all]
+        calc_assets = list(set(assets_obj))
+        push_resource = gen_resource(calc_assets)
+        task = MyTask(push_resource)
+        ret = {}
+
+        for program in program_all:
+            for asset in asset_all:
+
+                shell = '/root/jdk1.8.0_71_tomcat_8.0.30.sh 10.10.10.66 6666 livetest 8006 7000 8010'
+                ret = task.program_install(shell)
+
+                db_add_install(
+                    host_id=asset,
+                    ip=Asset.objects.get(host_id=asset)['ip'],
+                    app_name=program,
+                    status=0,
+                    apply_time=time.time()
+                )
+        # return HttpResponse(asset)
+    return my_render('jauto/program_add.html', locals(), request)
+
+
+@require_role(role='super')
+def program_status(request):
+    """
+    查看安装进度
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '安装进度', '自动化管理', '安装进度查询'
+    app_all = Application.objects.all()
+    app_list = Install.objects.all()
+    asset_all = Asset.objects.all().filter(if_del=0)
+    app_name = request.GET.get('app', '')
+    group = request.GET.get('group', '')
+
+    if group:
+        if app_name:
+            app_list = Install.objects.all().filter(app_name=app_name).filter(host_id=group)
+        else:
+            app_list = Install.objects.all().filter(host_id=group)
+    else:
+        if app_name:
+            app_list = Install.objects.all().filter(app_name=app_name)
+        else:
+            app_list = Install.objects.all()
+
+    # if group and app_name:
+    #     app_list = Install.objects.all().filter(host_id=group and app_name=app_name)
+    return my_render('jauto/program_status.html', locals(), request)
+
+
+# @require_role(role='super')
+def update_install_status(request):
+    """
+    封装方法，提供API给脚本回写状态
+    """
+    ip = request.GET.get('ip', '')
+    app = request.GET.get('app', '')
+    status = request.GET.get('status', '')
+    token = request.GET.get('token', '')
+    installing = Install.objects.filter(ip=ip).get(app_name=app)
+
+    # time_now = time
+    # if apply_time+
+    if installing.token == token:
+        installing.status = status
+        installing.save()
+    return HttpResponse(0)
+
+
+@require_role(role='super')
+def program_list(request):
+    """
+    应用列表
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用列表', '自动化管理', '应用列表查询'
+    app_all = Application.objects.all()
+    return my_render('jauto/program_list.html', locals(), request)
+
+
+@require_role(role='super')
+def program_list_add(request):
+    """
+    新增应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all().filter(if_del=0)
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    if request.method == 'POST':
+        group_name = request.POST.get('group_name', '')
+        users_selected = request.POST.getlist('users_selected', '')
+    return my_render('jauto/program_list_add.html', locals(), request)
+
+
+@require_role(role='super')
+def program_list_edit(request):
+    """
+    编辑应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '添加应用列表', '自动化管理', '添加应用列表'
+    program_id = request.GET.get('id', '')
+    program_all = get_object(Application, id=program_id)
+    app_all = Application.objects.all()
+    return my_render('jauto/program_list_edit.html', locals(), request)

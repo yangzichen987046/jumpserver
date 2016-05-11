@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+ <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-10">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>填写基本信息</h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="ibox-content">
+                        <form method="post" id="ruleForm" class="form-horizontal" action="">
+                            {% if error %}
+                                <div class="alert alert-warning text-center">{{ error }}</div>
+                            {% endif %}
+                            {% if msg %}
+                                <div class="alert alert-success text-center">{{ msg }}</div>
+                            {% endif %}
+                            <div class="form-group">
+                                <label for="user" class="col-sm-2 control-label">用户组</label>
+                                <div class="col-sm-8">
+                                    <select name="user" id="user" data-placeholder="请选择用户" class=" form-control m-b">
+                                    <option value="0">请选择</option>
+                                        {% for user_group in user_group_list %}
+                                            <option value="{{ user_group.id }}" >{{ user_group.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="user" class="col-sm-2 control-label">主机列表</label>
+                                <div class="col-sm-8">
+                                    <div class="check" id="asset_select">
+{#                                        {% for asset in asset_all %}#}
+{#                                            <div class="col-xs-6">#}
+{#                                                <input name="asset" class="testasset" id="{{ asset.id}}" type="checkbox" value="{{ asset.host_id }}">#}
+{#                                                <label for="{{ asset.host_id }}">{{ asset.hostname }}</label>#}
+{#                                            </div>#}
+{#                                        {% endfor %}#}
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="form-group">
+                                <label for="role" class="col-sm-2 control-label">应用<span class="red-fonts">*</span></label>
+                                <div class="col-sm-8"　id="role_name">
+                                    <div class="check">
+                                        {% for app in app_all %}
+                                            <div class="col-xs-6">
+                                               <input name="program" class="testasset" id="{{ app.id}}" type="checkbox" value="{{ app.app_name }}">
+                                               <label for="{{ app.id }}">{{ app.app_name }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="" id="zabbix_show" style="display:none;">
+                                <p class=" control-label lead pull-left" style="line-height: 55px;">请输入ZABBIX相关参数</p>
+                                <div class="col-xs-8 col-xs-offset-2 check">
+                                    <div class="form-group">
+                                        <label for="proj_name" class="col-sm-3 control-label">SERVER IP</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="zabbix_proxy_ip" name="zabbix_proxy_ip" placeholder="ZABBIX SERVER IP">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="" id="tomcat_show" style="display:none;">
+                                <p class=" control-label lead pull-left" style="line-height: 55px;">请输入TOMCAT相关参数</p>
+                                <div class="col-xs-8 col-xs-offset-2 check">
+                                    <div class="form-group">
+                                        <label for="proj_name" class="col-sm-3 control-label">项目名称</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="proj_name" name="proj_name" placeholder="项目名称">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="shut_port" class="col-sm-3 control-label">SHUTDOWN端口</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="shut_port" name="shut_port" placeholder="SHUTDOWN端口">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="http_port" class="col-sm-3 control-label">HTTP端口</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="http_port" name="http_port" placeholder="HTTP端口">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="ajp_port" class="col-sm-3 control-label">AJP端口</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="ajp_port" name="ajp_port" placeholder="AJP端口">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="hr-line-dashed"></div>
+                            <div class="form-group">
+                                <div class="col-sm-4 col-sm-offset-4"style="margin-top: 10px;">
+                                    <button class="btn btn-white" type="reset">取消</button>
+                                    <button id="submit_button" class="btn btn-primary" type="submit">确认保存</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block self_head_css_js %}
+    {% load staticfiles %}
+    <script src="{% static 'js/jquery.shiftcheckbox.js' %}"></script>
+{% endblock %}
+{% block self_footer_js %}
+<script>
+    $(document).ready(function(){
+        $("input[value='jdk1.7_tomcat7']").change(function(){
+            if($("input[value='jdk1.8_tomcat8']").is(":checked"))
+            {
+                $('#myModal').modal('show')
+
+                $(".modal-body").html("一次仅能选中一个tomcat")
+
+                $("input[value='jdk1.7_tomcat7']").attr("checked",false);
+                return;
+            }
+            if($("input[value='jdk1.7_tomcat7']").is(":checked"))
+            {
+                $('#tomcat_show').show();
+            }
+            else
+            {
+                $('#tomcat_show').hide();
+            }
+        });
+
+        $("input[value='jdk1.8_tomcat8']").change(function(){
+            if($("input[value='jdk1.7_tomcat7']").is(":checked"))
+            {
+                 $('#myModal').modal('show')
+
+                $(".modal-body").html("一次仅能选中一个tomcat")
+
+
+                $("input[value='jdk1.8_tomcat8']").attr("checked",false);
+                return;
+            }
+            if($("input[value='jdk1.8_tomcat8']").is(":checked"))
+            {
+                $('#tomcat_show').show();
+            }
+            else
+            {
+                $('#tomcat_show').hide();
+            }
+        });
+
+        $("input[value='zabbix_agent']").change(function(){
+            if($("input[value='zabbix_agent']").is(":checked"))
+            {
+                $('#zabbix_show').show();
+            }
+            else
+            {
+                $('#zabbix_show').hide();
+            }
+        });
+
+{#        $("input[value='zabbix_proxy']").change(function(){#}
+{#            if($("input[value='zabbix_proxy']").is(":checked"))#}
+{#            {#}
+{#                $('#zabbix_show').show();#}
+{#            }#}
+{#            else#}
+{#            {#}
+{#                $('#zabbix_show').hide();#}
+{#            }#}
+{#        });#}
+
+        $('.del').click(function(){
+            var row = $(this).closest('tr');
+            if (confirm("确定删除")) {
+            $.get(
+                $(this).attr('value'),
+                {},
+                function(data){
+                    row.remove();
+                    alert(data);
+                }
+            )}
+        });
+
+        $('#del_btn').click(function(){
+            var check_array = [];
+            if (confirm("确定删除")) {
+                $(".gradeX input:checked").each(function() {
+                    check_array.push($(this).attr("value"))
+                });
+                $.get("{% url 'user_group_del' %}",
+                    {id: check_array.join(",")},
+                    function(result){
+                        alert(result);
+                        $(".gradeX input:checked").closest("tr").remove();
+                    }
+                )
+            }
+        });
+
+        $("tbody tr").shiftcheckbox({
+            checkboxSelector: 'input:checkbox',
+            selectAll: $('#select_all'),
+            ignoreClick: 'a'
+        });
+
+        $('.shiftCheckbox').shiftcheckbox();
+
+        $("#user").change(function(){
+            var usergroup_id = $("#user").val()
+
+            url = '{% url 'auto_get_asset_list' %}'
+            data = {usergroup_id:usergroup_id}
+            $.ajax({
+                type:'post',
+                url:url,
+                data:data,
+                success:function(data){
+                    var arr = new Array();
+                    data = JSON.parse(data);
+                    arr = data;
+
+                    $("#asset_select").empty();
+
+                    for(var i=0;i<arr.length;i++) {
+                        var str_add = '<div class="col-xs-6">'+
+                            '<input name="asset" class="testasset" id="' + arr[i].fields.host_id + '" type="checkbox" value="' + arr[i].fields.host_id + '">'+
+                            '<label for="' + arr[i].fields.host_id +'">' + arr[i].fields.host_name_show + '</label>' +
+                        '</div>'
+                        $("#asset_select").append(str_add);
+                    }
+                },
+                error:function(){
+                    alert(2)
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

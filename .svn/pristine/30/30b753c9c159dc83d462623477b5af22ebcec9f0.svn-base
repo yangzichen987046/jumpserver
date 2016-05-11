@@ -1,0 +1,36 @@
+from django.db import models
+import datetime
+from jasset.models import Asset, AssetGroup,Asset_Group
+from juser.models import User, UserGroup
+
+# Create your models here.
+
+
+class Access_Log(models.Model):
+    site_id = models.CharField(max_length=11)
+    ip = models.CharField(max_length=30)
+    access_time = models.CharField(max_length=30)
+    province = models.CharField(max_length=10)
+    api = models.CharField(max_length=50)
+    access_status = models.CharField(max_length=4)
+    response_time = models.CharField(max_length=10)
+
+
+class Minute_Log(models.Model):
+    site_id = models.CharField(max_length=11)
+    province = models.CharField(max_length=10)
+    access_num = models.CharField(max_length=10)
+    time = models.CharField(max_length=15)
+
+
+class Site(models.Model):
+    usergroup_id = models.CharField(max_length=11)
+    site_name = models.CharField(max_length=50)
+    token = models.CharField(max_length=40)
+    province = models.CharField(max_length=10)
+    location = models.CharField(max_length=30)
+
+
+class Province(models.Model):
+    province = models.CharField(max_length=10)
+    location = models.CharField(max_length=30)

@@ -1,0 +1,32 @@
+# coding: utf-8
+from __future__ import division
+import xlrd
+import xlsxwriter
+from django.db.models import AutoField
+from jumpserver.api import *
+from jasset.models import ASSET_STATUS, ASSET_TYPE, ASSET_ENV, IDC, AssetRecord, Assetgroup_Usergroup, Asset_Group, Region
+from jperm.ansible_api import MyRunner
+from jperm.perm_api import gen_resource
+from jumpserver.templatetags.mytags import get_disk_info
+from juser.models import AccessKey, User_Group
+from juser.key_api import auto_add_host, get_assetgroupid_by_usergroupid
+import commands
+
+
+def get_assetgroup_by_usergroup(usergroup_id):
+    group_all = Assetgroup_Usergroup.objects.all.filter(usergroup_id=usergroup_id)
+    assetgroup_id = []
+    if group_all:
+        for agroup in group_all:
+            assetgroup_id.append(agroup['assetgroup_id'])
+    return assetgroup_id
+
+
+def db_save_assetgroup_usergroup(assetgroup_id, usergroup_id):
+    if Assetgroup_Usergroup.objects.filter(assetgroup_id=assetgroup_id).filter(usergroup_id=usergroup_id):
+        return
+    else:
+        group = Assetgroup_Usergroup(
+            assetgroup_id=assetgroup_id,
+            usergroup_id=usergroup_id)
+        group.save()

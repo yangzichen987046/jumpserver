@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+{% include 'nav_cat_bar.html' %}
+
+ <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-10">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>填写基本信息</h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="ibox-content">
+                    <div class="ibox-step text-center col-xs-8 col-xs-offset-2">
+                        <img src="/static/img/step-1.png " class="img-responsive">
+                        <img src="/static/img/step-2.png" class="img-responsive">
+                        <img src="/static/img/step-3.png" class="img-responsive">
+                        <p class="col-xs-4 text-left no-padding active">输入名称</p>
+                        <p class="col-xs-4 ">选取发布主机</p>
+                        <p class="col-xs-4 no-padding text-right ">选取集群</p>
+                    </div>
+                        <form method="post" id="projectForm" class="form-horizontal" action="">
+                            {% if error %}
+                                <div class="alert alert-warning text-center">{{ error }}</div>
+                            {% endif %}
+                            {% if msg %}
+                                <div class="alert alert-success text-center">{{ msg }}</div>
+                            {% endif %}
+                            <div class="form-group pro">
+                                <div class="col-xs-8 col-xs-offset-2">
+                                    <label for="appname" class="col-sm-3 control-label">选取客户</label>
+                                    <div class="col-sm-9">
+                                        <select name="usergroup" id="usergroup" data-placeholder="请选择应用名" class=" form-control m-b">
+                                            <option value="">请选择</option>
+                                            {% for usergroup in user_group_list %}
+                                                <option value="{{ usergroup.id }}" >{{ usergroup.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-xs-8 col-xs-offset-2">
+                                    <label for="appname" class="col-sm-3 control-label">输入名称</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" value="" class="form-control m-b" id="proj_name" name="proj_name"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group pro">
+                                <div class="col-xs-8 col-xs-offset-2">
+                                    <label for="hostname" class="col-sm-3 control-label">选取发布主机</label>
+                                    <div class="col-sm-9">
+                                          <select name="hostname" id="hostname" data-placeholder="请选择应用名" class=" form-control m-b">
+                                                <option value="">请选择</option>
+
+                                          </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group pro">
+                                 <div class="col-xs-8 col-xs-offset-2">
+                                    <label for="clustername" class="col-sm-3 control-label">选取集群</label>
+                                    <div class="col-sm-9">
+                                        <select name="clustername" id="clustername" data-placeholder="请选择集群" class=" form-control m-b">
+                                                <option value="0">请选择</option>
+
+                                          </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="col-sm-3 col-sm-offset-5 ">
+                                    <div id="" class="btn btn-primary sub" >下一步</div>
+                                    <div id="" class="btn btn-primary sub" >下一步</div>
+                                    <div id="" class="btn btn-primary sub" >完成</div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block self_head_css_js %}
+    {% load staticfiles %}
+    <script src="{% static 'js/jquery.shiftcheckbox.js' %}"></script>
+{% endblock %}
+{% block self_footer_js %}
+<script>
+    $(document).ready(function(){
+        $(".ibox-step").find("img:first").css("display","block");
+        $(".sub:first").css("display","block");
+        $(".pro:first").css("display","block");
+        $(".sub").click(function(){
+            var usergroup=$("#usergroup").val()
+            var proj_name=$("#proj_name").val()
+            var hostname=$("#hostname").val()
+            var clustername=$("#clustername").val()
+            var topIndex=$(this).index();
+            if(topIndex==0){
+                if(usergroup !==null && usergroup !==""&&proj_name !==null && proj_name !==""){
+                    $(".sub").eq(topIndex+1).fadeIn().siblings(".sub").hide();
+                    $(".ibox-step img").eq(topIndex+1).fadeIn().siblings(".ibox-step img").hide();
+                    $(".pro").eq(topIndex+1).fadeIn().siblings(".pro").hide();
+                    $(".ibox-step p").eq(topIndex+1).addClass("active")
+                }
+                else {
+                    alert("请选择客户和填写名称")
+                }
+            }
+            if(topIndex==1){
+                if(hostname !==null && hostname !==""){
+                    $(".sub").eq(topIndex+1).fadeIn().siblings(".sub").hide();
+                    $(".ibox-step img").eq(topIndex+1).fadeIn().siblings(".ibox-step img").hide();
+                    $(".pro").eq(topIndex+1).fadeIn().siblings(".pro").hide();
+                    $(".ibox-step p").eq(topIndex+1).addClass("active")
+                }
+                else {
+                    alert("请选择发布主机")
+                }
+            }
+            if(topIndex==2){
+                if(clustername !==null && clustername !==""){
+                    $(".sub").eq(topIndex+1).fadeIn().siblings(".sub").hide();
+                    $(".ibox-step img").eq(topIndex+1).fadeIn().siblings(".ibox-step img").hide();
+                    $(".pro").eq(topIndex+1).fadeIn().siblings(".pro").hide();
+                    $(".ibox-step p").eq(topIndex+1).addClass("active");
+
+                    $('#projectForm').submit();
+                }
+                else {
+                    alert("请选择集群")
+                }
+            }
+        })
+
+        $("#usergroup").change(function(){
+        var usergroup_id = $("#usergroup").val()
+        url = '{% url 'release_get_project_list' %}'
+        data = {usergroup_id:usergroup_id}
+        $.ajax({
+            type:'post',
+            url:url,
+            data:data,
+            dataType:'json',
+            success:function(data){
+                var arr_host = new Array();
+                var arr_cluster = new Array();
+                arr_host = JSON.parse(data['host']);
+                arr_cluster = JSON.parse(data['cluster']);
+                $("#hostname").empty();
+                $("#clustername").empty();
+                $("#hostname").append('<option value="">请选择</option>')
+                $("#clustername").append('<option value="">请选择</option>')
+                for(var i=0;i<arr_host.length;i++) {
+                    $("#hostname").append(' <option value="'+ arr_host[i].fields.host_id +'">' + arr_host[i].fields.host_name_show + '</option>');
+                }
+                for(var j=0;j<arr_cluster.length;j++) {
+                    $("#clustername").append(' <option value="'+ arr_cluster[j].pk +'">' + arr_cluster[j].fields.cluster_name + '</option>');
+                }
+            },
+            error:function(){
+                alert('接口请求失败')
+            }
+        });
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+        $('.del').click(function(){
+            var row = $(this).closest('tr');
+            if (confirm("确定删除")) {
+            $.get(
+                $(this).attr('value'),
+                {},
+                function(data){
+                    row.remove();
+                    alert(data);
+                }
+
+            )}
+        });
+
+        $('#del_btn').click(function(){
+            var check_array = [];
+            if (confirm("确定删除")) {
+                $(".gradeX input:checked").each(function() {
+                    check_array.push($(this).attr("value"))
+                });
+                $.get("{% url 'user_group_del' %}",
+                    {id: check_array.join(",")},
+                    function(result){
+                        alert(result);
+                        $(".gradeX input:checked").closest("tr").remove();
+                    }
+                )
+            }
+        });
+        $("tbody tr").shiftcheckbox({
+            checkboxSelector: 'input:checkbox',
+            selectAll: $('#select_all'),
+            ignoreClick: 'a'
+        });
+        $('.shiftCheckbox').shiftcheckbox();
+    });
+</script>
+{% endblock %}

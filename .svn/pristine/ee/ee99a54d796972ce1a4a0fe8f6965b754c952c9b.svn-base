@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import AccessKey, User_Group
+from jasset.models import Asset, IDC, AssetGroup, ASSET_TYPE, ASSET_STATUS, Assetgroup_Usergroup, Asset_Group
+import json
+from jauto.models import *
+from django.contrib.sessions.models import Session
+
+# Create your views here.
+
+
+def index(request):
+    return HttpResponse(11)
+
+
+@require_role(role='super')
+def program_add(request):
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '应用管理', '自动化管理', '应用管理'
+    asset_all = Asset.objects.all()
+    user_group_list = UserGroup.objects.all()
+    app_all = Application.objects.all()
+
+    return my_render('jauto/program_add.html', locals(), request)
+
+
+@require_role(role='super')
+def program_status(request):
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '安装进度', '自动化管理', '安装进度查询'
+    app_all = Application.objects.all()
+    app_list = Install.objects.all()
+    asset_all = Asset.objects.all()
+    app_name = request.GET.get('app', '')
+    group = request.GET.get('group', '')
+
+    if group:
+
+        if app_name:
+            app_list = Install.objects.all().filter(app_name=app_name).filter(host_id=group)
+        else:
+            app_list = Install.objects.all().filter(host_id=group)
+    else:
+        if app_name:
+            app_list = Install.objects.all().filter(app_name=app_name)
+        else:
+            app_list = Install.objects.all()
+
+    # if group and app_name:
+    #     app_list = Install.objects.all().filter(host_id=group and app_name=app_name)
+    return my_render('jauto/program_status.html', locals(), request)
+
+
+
+
+
+
+
+
+@require_role(role='super')
+def check_uninstall(request):
+    install_wait = Install.objects.filter(status=0)
+    if install_wait:
+        # install_wait = len(install_wait)
+        for install_info in install_wait:
+            return HttpResponse(install_info.host_id)

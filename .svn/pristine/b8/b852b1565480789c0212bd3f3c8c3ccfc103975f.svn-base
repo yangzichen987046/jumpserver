@@ -1,0 +1,60 @@
+# coding: utf-8
+from __future__ import division
+from jrelease.models import *
+from jperm.ansible_api import *
+from jperm.perm_api import *
+
+
+def db_proj_add(**kwargs):
+    """
+    add project to db
+    添加项目时数据库操作函数
+    """
+    project = Project(**kwargs)
+    project.save()
+
+
+def db_cluster_add(**kwargs):
+    """
+    add Cluster to db
+    添加集群时数据库操作函数
+    """
+    cluster = Cluster(**kwargs)
+    cluster.save()
+
+
+def db_cluster_edit(**kwargs):
+    """
+    update Cluster to db
+    """
+    cluster_id = kwargs.pop('id')
+    Cluster.objects.filter(id=cluster_id).update(**kwargs)
+
+
+def first_release(host_id):
+    """
+    首次发布代码，需要传数个参数，以回写
+    """
+    # /data/scripts/deploy.sh auth auth.zip 8081
+    # shell = "/tmp/shell/install/%s %s %s" % (program_script, ip, token)
+    shell = ''
+    asset_detail = Asset.objects.all().get(id=host_id)
+    calc_assets = list(set([asset_detail]))
+    push_resource = gen_resource(calc_assets)
+    task = MyTask(push_resource)
+    ret = task.program_install(shell)
+    return ret
+
+
+def common_release(asset_list):
+    """
+    正常发布代码
+    """
+    shell = ''
+    asset_detail = Asset.objects.all().filter(id__in=asset_list)
+    calc_assets = list(set([asset_detail]))
+    push_resource = gen_resource(calc_assets)
+    task = MyTask(push_resource)
+    ret = task.program_install(shell)
+    return ret
+

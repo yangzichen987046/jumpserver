@@ -1,0 +1,132 @@
+# -*- coding: utf-8 -*-
+
+from django.shortcuts import render
+import uuid
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from django.core import serializers
+from django.db.models import Q
+
+from juser.user_api import *
+from juser.key_api import *
+from jasset.asset_api import *
+from jperm.perm_api import get_group_user_perm, get_role_push_host
+from juser.models import AccessKey, User_Group
+from jasset.models import Asset, IDC, AssetGroup, ASSET_TYPE, ASSET_STATUS, Assetgroup_Usergroup, Asset_Group
+import json
+import time
+from jrelease.models import *
+from django.contrib.sessions.models import Session
+from jauto.install_api import *
+from jperm.ansible_api import *
+from jasset.relation_api import *
+
+# Create your views here.
+
+@require_role('admin')
+def index(request):
+    return HttpResponse(11)
+
+@require_role('admin')
+def project_list(request):
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目管理查询'
+    project_list = Project.objects.all()
+    project_all = Project.objects.all()
+    usergroup_all = UserGroup.objects.all()
+    usergroup_name = request.GET.get('usergroup_name', '')
+    proj_name = request.GET.get('proj_name', '')
+
+    asset_user_group = Assetgroup_Usergroup.objects.all().filter(usergroup_id=usergroup_name)
+    a_u_group = []
+    a_group = []
+    h_group=[]
+    for a_u_group_tmp in asset_user_group:
+        a_u_group.append(a_u_group_tmp.assetgroup_id)
+        asset_group = Asset_Group.objects.all().filter(assetgroup_id__in=a_u_group)
+        for a_group_tmp in asset_group:
+            a_group.append(a_group_tmp.asset_id)
+            host_group = Asset.objects.all().filter(id__in=a_group)
+            for h_group_tmp in host_group:
+                 h_group.append(h_group_tmp.host_id)
+
+
+
+    if proj_name:
+        project_list = Project.objects.all().filter(proj_name=proj_name)
+        if usergroup_name:
+                project_list = project_list.filter(release_host_id__in=h_group)
+
+
+    return my_render('jrelease/project_list.html', locals(), request)
+
+
+@require_role(role='super')
+def project_edit(request):
+    """
+    编辑项目
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '编辑项目管理', '自动化发布', '编辑项目管理'
+    project_id = request.GET.get('id', '')
+    project = Project.objects.all().get(id=project_id)
+
+    asset_all = get_asset_by_usergroup(project.usergroup_id)
+    cluster_all = Cluster.objects.all()
+    # if request.method == 'POST':
+    #     # asset_name = request.POST.get('assetname', '')
+    #     asset_group = request.POST.get('assetgroup', '')
+    #     group = Project(
+    #             # assetgroup_id=asset_name,
+    #             proj_name=asset_group)
+    #     group.save()
+    # # project_list = Project.objects.all()
+
+    return my_render('jrelease/project_edit.html', locals(), request)
+
+
+@require_role(role='super')
+def project_detail(request):
+    """
+    提交安装应用
+    """
+    user_role = {'SU': u'超级管理员', 'GA': u'组管理员', 'CU': u'普通用户'}
+    header_title, path1, path2 = '项目管理', '自动化发布', '项目管理'
+    project_id = request.GET.get('id', '')
+
+
+    project_all = get_object(Project, id=project_id)
+
+
+    project_list = Project.objects.all().filter(id=project_id)
+    a_group=[]
+    a_group=[]
+    b_group=[]
+    c_group=[]
+    d_group=[]
+    for a_group_tmp in project_list:
+        a_group.append(a_group_tmp.cluster_id)
+        cluster_list =Cluster.objects.all().filter(id__in=a_group)
+        for b_group_tmp in cluster_list:
+            b_group.append(b_group_tmp.hosts)
+
+            c_group = b_group_tmp.hosts.split('|')
+            asset_all =Asset.objects.all().filter(id__in=c_group)
+
+            # assetgroup =Assetgroup_Usergroup.objects.all().filter(usergroup_id__in=b_group)
+            # for c_group_tmp in assetgroup:
+            #     c_group.append(c_group_tmp.assetgroup_id)
+            #     assetid =Asset_Group.objects.all().filter(assetgroup_id__in=c_group)
+            #     for d_group_tmp in assetid:
+            #         d_group.append(d_group_tmp.asset_id)
+            #         asset_all =Asset.objects.all().filter(id__in=d_group)
+
+
+   
+
+
+    # cluster_list =Cluster.objects.all()
+
+
+    return my_render('jrelease/project_detail.html', locals(), request)
